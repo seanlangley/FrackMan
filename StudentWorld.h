@@ -14,36 +14,27 @@ class StudentWorld : public GameWorld
 {
 public:
     StudentWorld(std::string assetDir)
-    : GameWorld(assetDir)
-    {
-        
-    }
+    : GameWorld(assetDir){}
+    ~StudentWorld();
+    
+    virtual int init();
+    virtual int move();
+    virtual void cleanUp();
+    bool isThereDirt(int x, int y);
+    void deleteActor(Actor* deleteMe);
 
-    virtual int init()
-    {
-        m_dirt[0][0] = new Dirt(0,0);
-        return GWSTATUS_CONTINUE_GAME;
-    }
-
-	virtual int move()
-	{
-		  // This code is here merely to allow the game to build, run, and terminate after you hit enter a few times.
-		  // Notice that the return value GWSTATUS_PLAYER_DIED will cause our framework to end the current level.
-		decLives();
-		return GWSTATUS_PLAYER_DIED;
-	}
-
-	virtual void cleanUp()
-	{
-        
-	}
-
+    
 private:
+
     list<Actor*> m_actors;
-    Dirt* m_dirt[60][64];
-    FrackMan* m_frackman;
+    Dirt* m_dirt[64][64];
+    FrackMan* m_player;
     
     
 };
 
 #endif // STUDENTWORLD_H_
+
+
+
+
