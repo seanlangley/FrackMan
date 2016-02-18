@@ -5,7 +5,7 @@
 #include "GameConstants.h"
 #include "Actor.h"
 #include <string>
-#include <list>
+#include <vector>
 using namespace std;
 
 // Students:  Add code to this file, StudentWorld.cpp, Actor.h, and Actor.cpp
@@ -21,12 +21,17 @@ public:
     virtual int move();
     virtual void cleanUp();
     bool isThereDirt(int x, int y);
+    bool isThereActor(int x, int y);
     void deleteActor(Actor* deleteMe);
-
+    void deleteDirt(Dirt* deleteMe);
+    void addDirt();
+    void addBoulders();
+    int numBoulders();
+    FrackMan* getPlayer(){return m_player;}
     
 private:
 
-    list<Actor*> m_actors;
+    vector<Actor*> m_actors;
     Dirt* m_dirt[64][64];
     FrackMan* m_player;
     
