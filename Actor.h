@@ -58,6 +58,9 @@ public:
     virtual void doSomething();
     virtual void getAnnoyed();
     int getHealth(){return m_health;}
+    void move(Direction dir);
+    void setDead(){m_health = 0;}
+    void react(int Actor);
 private:
     int m_health;
     
@@ -72,6 +75,11 @@ private:
 #ifndef BOULDER_H
 #define BOULDER_H
 
+const int STABLE = 0;
+const int WAITING = 1;
+const int FALLING = 2;
+
+
 class Boulder : public Actor
 {
 public:
@@ -79,10 +87,9 @@ public:
     virtual ~Boulder(){return;}
     virtual void doSomething();
     virtual void getAnnoyed(){return;}
-    bool isAlive(){return m_isAlive;}
+    int state(){return m_state;}
 private:
-    bool m_isAlive;
-
+    int m_state;
 };
 
 #endif // BOULDER_H_
