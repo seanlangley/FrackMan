@@ -13,8 +13,7 @@ using namespace std;
 class StudentWorld : public GameWorld
 {
 public:
-    StudentWorld(std::string assetDir)
-    : GameWorld(assetDir){}
+    StudentWorld(std::string assetDir);
     ~StudentWorld();
     
     virtual int init();
@@ -22,11 +21,16 @@ public:
     virtual void cleanUp();
     bool isThereDirt(int x, int y);
     bool isThereActor(int x, int y);
+    bool isInvalidRadius(int x, int y);
+    bool isThereBoulder(int x, int y);
     void deleteActor(Actor* deleteMe);
-    void deleteDirt(Dirt* deleteMe);
+    void deleteDirt();
     void addDirt();
     void addBoulders();
-    int numBoulders();
+    void addOil();
+    void clearDead();
+    void gotBarrel(){m_numBarrels--;}
+    int numObjects(int IID);
     FrackMan* getPlayer(){return m_player;}
     
 private:
@@ -34,6 +38,7 @@ private:
     vector<Actor*> m_actors;
     Dirt* m_dirt[64][64];
     FrackMan* m_player;
+    int m_numBarrels;
     
     
 };
