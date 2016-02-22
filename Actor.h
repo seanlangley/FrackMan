@@ -3,6 +3,15 @@
 
 #include "GraphObject.h"
 
+const int BOULDER = 0;
+const int SQUIRT = 1;
+const int BARREL_OF_OIL = 2;
+const int GOLD_NUGGET = 3;
+const int SONAR_KIT = 4;
+const int WATER_POOL = 5;
+const int REGULAR_PROTESTOR = 6;
+const int HARDCORE_PROTESTOR = 7;
+
 // Students:  Add code to this file, Actor.cpp, StudentWorld.h, and StudentWorld.cpp
 class StudentWorld;
 ////////////////////////////////////////////////////////////////////////////////
@@ -11,13 +20,16 @@ class StudentWorld;
 class Actor : public GraphObject
 {
 public:
-    Actor(int IID, int x, int y, Direction dir, bool isVisible, float size, unsigned  int depth, StudentWorld* sw);
+    Actor(int IID, int x, int y, Direction dir, float size, unsigned int depth, StudentWorld* sw);
     virtual ~Actor();
     virtual void doSomething() = 0;
     virtual void getAnnoyed() = 0;
     virtual StudentWorld* getWorld(){return m_world;}
+    bool isDead() const {return m_dead;}
+    void setDead() {m_dead = true;}
 private:
     StudentWorld* m_world;
+    bool m_dead;
    
     
 };
@@ -37,7 +49,7 @@ public:
     virtual ~Dirt();
     virtual void doSomething(){return;}
     virtual void getAnnoyed(){return;}
-    
+
 };
 
 #endif // DIRT_H_
@@ -59,10 +71,15 @@ public:
     virtual void getAnnoyed();
     int getHealth(){return m_health;}
     void move(Direction dir);
-    void setDead(){m_health = 0;}
+    void setDead();
     void react(int Actor);
+    void increaseScore(int points){m_score += points;}
+    bool isWithinRadius(Actor* actor);
+    
 private:
     int m_health;
+    int m_score;
+    
     
 
     
@@ -90,6 +107,7 @@ public:
     int state(){return m_state;}
 private:
     int m_state;
+    int m_count;
 };
 
 #endif // BOULDER_H_
@@ -121,8 +139,8 @@ class BarrelOfOil : public Actor
 public:
     BarrelOfOil(int x, int y, StudentWorld* sw);
     virtual ~BarrelOfOil(){return;}
-    virtual void doSomething(){return;}
-    virtual void getAnnoyed(){return;}
+    virtual void doSomething();
+    virtual void getAnnoyed();
 };
 
 #endif // BARREL_OF_OIL_H
