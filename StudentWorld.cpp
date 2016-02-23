@@ -1,32 +1,43 @@
 #include "StudentWorld.h"
 #include <string>
-#include <vector>
-#include <algorithm>
 using namespace std;
 
 GameWorld* createStudentWorld(string assetDir)
 {
-	return new StudentWorld(assetDir);
+    return new StudentWorld(assetDir);
 }
 
 // Students:  Add code to this file (if you wish), StudentWorld.h, Actor.h and Actor.cpp
 
-////////////////////////////////////////////////////////////////////////////////
-// Auxiliary Functions
-////////////////////////////////////////////////////////////////////////////////
-
-
 StudentWorld::StudentWorld(std::string assetDir)
-: GameWorld(assetDir), m_numBarrels(numObjects(IID_BARREL))
+: GameWorld(assetDir)
 {}
 
 StudentWorld::~StudentWorld()
 {
     cleanUp();
 }
+bool StudentWorld::canActorMoveTo(Actor* a, int x, int y) const
+{
+    if(isThereDirt(x,y))
+        return false;
+    return true;
+}
 
-//Checks if there's dirt within Frackman's coordinate
-bool StudentWorld::isThereDirt(int x, int y)
+void StudentWorld::addDirt()
+{
+    for(int x = 0; x < 64; x++)
+        for(int y = 0; y < 4; y++)
+            m_dirt[x][y] = new Dirt(this, x,y);
+    
+    for(int x = 0; x < 64; x++)
+        for(int y = 4; y < 60; y++)
+            if(x < 30 || x > 33)
+                m_dirt[x][y] = new Dirt(this, x,y);
+}
+
+
+bool StudentWorld::isThereDirt(int x, int y) const 
 {
     for(int i = 0; i < 4; i++)
         for(int k = 0; k < 4; k++)
@@ -35,58 +46,25 @@ bool StudentWorld::isThereDirt(int x, int y)
     return false;
 }
 
-
-bool StudentWorld::isThereActor(int x, int y)
+void StudentWorld::clearDirt(int x, int y)
 {
-    for(vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); it++)
+    if(isThereDirt(x,y))                                //If there's dirt at the player's location, delete the dirt
     {
-        int x1 = (**it).getX();
-        int y1 = (**it).getY();
-        
-        for(int i = 0; i < 4; i++)
+        playSound(SOUND_DIG);
+        for(int i = 0;  i < 4; i++)
             for(int k = 0; k < 4; k++)
-                if(x == x1 + i && y == y1 + k)
-                    return true;
+            {
+                if(m_dirt[x+i][y+k] != nullptr)
+                {
+                    m_dirt[x+i][y+k]->setVisible(false);     //FIND OUT HOW TO USE POLYMORPHISM deleteActor HERE
+                    delete m_dirt[x+i][y+k];
+                    m_dirt[x+i][y+k] = nullptr;
+                }
+            }
+        
         
     }
-    return false;
-    
 }
-
-bool StudentWorld::isThereBoulder(int x, int y)
-{
-    
-    for(vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); it++)
-    {
-        if((*it)->getID() != IID_BOULDER)
-            continue;
-        int x1 = (**it).getX();
-        int y1 = (**it).getY();
-        
-        for(int i = 0; i < 4; i++)
-            for(int k = 0; k < 4; k++)
-                if(x == x1 + i  && y == y1 + k)
-                    return true;
-    }
-    return false;
-        
-}
-
-//DeAllocate an actor's memory, set it's pointer to NULL
-void StudentWorld::deleteActor(Actor* deleteMe)
-{
-    m_actors.erase(remove(m_actors.begin(), m_actors.end(), deleteMe), m_actors.end());
-    
-    
-    if(deleteMe != nullptr)
-    {
-        deleteMe->setVisible(false);
-        delete  deleteMe;
-        deleteMe = nullptr;
-    }
-
-}
-
 
 int StudentWorld::numObjects(int IID)
 {
@@ -112,28 +90,6 @@ int StudentWorld::numObjects(int IID)
             
     }
 }
-////////Checks the Euclidian Radius of
-bool StudentWorld::isInvalidRadius(int x, int y)
-{
-    for(int i = 0; i < 8; i++)
-        for(int k = 0; k < 8; k++)
-            if(isThereActor(x+i, y+k) || isThereActor(x+4-i, y+4-k))
-                return true;
-    return false;
-}
-
-////////Add Dirt to the field
-void StudentWorld::addDirt()
-{
-    for(int x = 0; x < 64; x++)
-        for(int y = 0; y < 4; y++)
-            m_dirt[x][y] = new Dirt(x,y, this);
-    
-    for(int x = 0; x < 64; x++)
-        for(int y = 4; y < 60; y++)
-            if(x < 30 || x > 33)
-                m_dirt[x][y] = new Dirt(x,y, this);
-}
 
 ////////Add Boulders to the field
 void StudentWorld::addBoulders()
@@ -149,7 +105,7 @@ void StudentWorld::addBoulders()
         
         if(isThereDirt(x,y) || isThereDirt(x+4, y+4))
         {
-            m_actors.push_back(new Boulder(x,y, this));
+            m_actors.push_back(new Boulder(this, x,y));
             for(int i = 0;  i < 4; i++)
                 for(int k = 0; k < 4; k++)
                 {
@@ -166,6 +122,90 @@ void StudentWorld::addBoulders()
     }
 }
 
+void StudentWorld::clearDead()
+{
+    for(vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end();)
+        if(*it != nullptr)
+        {
+            if((*it)->isAlive() == false)
+            {
+                
+                {
+                    delete *it;
+                    *it = nullptr;
+                    it = m_actors.erase(it);
+                }
+                
+                
+            }
+            else it++;
+        }
+    
+    
+    
+    
+}
+
+bool StudentWorld::isThereActor(int x, int y) 
+{
+    for(vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); it++)
+    {
+        int x1 = (**it).getX();
+        int y1 = (**it).getY();
+        
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < 4; k++)
+                if(x == x1 + i && y == y1 + k)
+                    return true;
+        
+    }
+    return false;
+    
+}
+
+bool StudentWorld::isNearFrackMan(Actor *a, int radius)
+{
+    for(int i = 0; i < radius; i++)
+        for(int k = 0; k < radius; k++)
+        {
+            if(a->getX() + i == m_player->getX() + i && a->getY() + k == m_player->getY() + k)
+                return true;
+        }
+    return false;
+    
+        
+       
+}
+////////Checks the Euclidian Radius of
+bool StudentWorld::isInvalidRadius(int x, int y) 
+{
+    for(int i = 0; i < 8; i++)
+        for(int k = 0; k < 8; k++)
+            if(isThereActor(x+i, y+k) || isThereActor(x+4-i, y+4-k))
+                return true;
+    return false;
+}
+
+void StudentWorld::addActor(Actor *a, int imageID)
+{
+    
+    for(int k = 0; k < numObjects(imageID); k++)
+    {
+        int x = rand() % 56; int y = rand() % 56;
+        while(isInvalidRadius(x,y))
+        {
+            x = rand() % 56; y = rand() % 56;
+        }
+    
+        if(isThereDirt(x,y) || isThereDirt(x+4, y+4))
+        {
+            
+            m_actors.push_back(a);
+        }
+    }
+    m_actors.push_back(a);
+}
+
 void StudentWorld::addOil()
 {
     for(int k = 0; k < numObjects(IID_BARREL); k++)
@@ -180,52 +220,30 @@ void StudentWorld::addOil()
         if(isThereDirt(x,y) || isThereDirt(x+4, y+4))
         {
             
-            m_actors.push_back(new BarrelOfOil(x,y, this));
+            m_actors.push_back(new OilBarrel(this, x,y));
         }
         else --k;
     }
 }
 
-void StudentWorld::deleteDirt()
+void StudentWorld::addGold()
 {
-    int x = m_player->getX(), y = m_player->getY();
-    if(isThereDirt(x,y))                                //If there's dirt at the player's location, delete the dirt
+    for(int k = 0; k < numObjects(IID_GOLD); k++)
     {
-        playSound(SOUND_DIG);
-        for(int i = 0;  i < 4; i++)
-            for(int k = 0; k < 4; k++)
-            {
-                if(m_dirt[x+i][y+k] != nullptr)
-                {
-                    m_dirt[x+i][y+k]->setVisible(false);     //FIND OUT HOW TO USE POLYMORPHISM deleteActor HERE
-                    delete m_dirt[x+i][y+k];
-                    m_dirt[x+i][y+k] = nullptr;
-                }
-            }
+        int x = rand() % 56; int y = rand() % 56;
         
+        while(isInvalidRadius(x,y))
+        {
+            x = rand() % 56, y = rand() % 56;
+        }
         
+        if(isThereDirt(x,y) || isThereDirt(x+4, y+4))
+        {
+            
+            m_actors.push_back(new GoldNugget(this, x,y, true));
+        }
+        else --k;
     }
-}
-
-void StudentWorld::clearDead()
-{
-    for(vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); it++)
-        if(*it != nullptr)
-            if((*it)->isDead() == true)
-            {
-            
-                {
-                    delete *it;
-                    *it = nullptr;
-                    it = m_actors.erase(it);
-                }
-            
-            
-            }
-        
-    
-        
-    
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -235,47 +253,45 @@ void StudentWorld::clearDead()
 int StudentWorld::init()
 
 {
+    m_numBarrels = numObjects(IID_BARREL);
     addDirt();
     addBoulders();
     addOil();
-    m_player = new FrackMan(this);
+    addGold();
+    m_player = new FrackMan(this, 30, 60);
     return GWSTATUS_CONTINUE_GAME;
 }
 
-
-
-
-
 int StudentWorld::move()
 {
-    
     setGameStatText("");
     
-    if(m_player->getHealth() > 0)
+    if(m_player->isAlive())
     {
         
-        m_player->doSomething();
+        m_player->move();
         for(vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); it++)
         {
-            (*it)->doSomething();
+            (*it)->move();
             
-              ///////////FIGURE OUT HOW TO DELETE ACTORS HERE
-
+            ///////////FIGURE OUT HOW TO DELETE ACTORS HERE
+            
         }
         
+        clearDirt(m_player->getX(), m_player->getY());
         clearDead();
-        deleteDirt();
-        return GWSTATUS_CONTINUE_GAME;
+        
     }
     
-    
+    if(m_numBarrels > 0)
+        return GWSTATUS_CONTINUE_GAME;
     if(m_numBarrels == 0)
         return GWSTATUS_FINISHED_LEVEL;
     
-    decLives();
-    return GWSTATUS_PLAYER_DIED;
     
+    return GWSTATUS_PLAYER_DIED;
 }
+
 
 void StudentWorld::cleanUp()
 {
@@ -294,6 +310,9 @@ void StudentWorld::cleanUp()
     
     
 }
+
+
+
 
 
 
