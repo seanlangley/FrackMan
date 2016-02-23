@@ -51,6 +51,8 @@ public:
     // Move this actor to x,y if possible, and return true; otherwise,
     // return false without moving.
     bool moveToIfPossible(int x, int y){return true;}
+    virtual bool canIBePickedUp(){return false;}
+    
 private:
     bool m_isAlive;
     StudentWorld* m_world;
@@ -86,17 +88,18 @@ private:
 class FrackMan : public Agent
 {
 public:
-    FrackMan(StudentWorld* world, int startX, int startY);
+    FrackMan(StudentWorld* world);
     virtual void move();
     virtual bool annoy(unsigned int amount){return true;}
-    virtual void addGold(){m_numNuggets++;}
+    virtual void addGold(){m_numNuggets++; increaseScore(10);}
     virtual bool canDigThroughDirt() const{return true;}
     
+    
     // Pick up a sonar kit.
-    void addSonar(){m_numSonar++;}
+    void addSonar(){m_numSonar++; increaseScore(75);}
     
     // Pick up water.
-    void addWater(){m_numWater++;}
+    void addWater(){m_numWater++; increaseScore(100);}
     
     // Get amount of gold
     unsigned int getGold() const{return m_numNuggets;}
@@ -107,6 +110,9 @@ public:
     // Get amount of water
     unsigned int getWater() const{return m_numWater;}
     void increaseScore(int score){m_score += score;}
+    void dropGold(Direction dir);
+    void getGoodie();
+    void shootGun();
     
     void go(Direction dir);
 private:
@@ -125,16 +131,21 @@ class Protester : public Agent
 public:
     Protester(StudentWorld* world, int startX, int startY, int imageID,
               unsigned int hitPoints, unsigned int score);
-    virtual void move();
-    virtual bool annoy(unsigned int amount);
-    virtual void addGold();
-    virtual bool huntsFrackMan() const;
+    virtual void move(){return;}
+    virtual bool annoy(unsigned int amount){return true;}
+    virtual void addGold(){return;}
+    virtual bool huntsFrackMan() const{return true;}
     
     // Set state to having gien up protest
-    void setMustLeaveOilField();
+    void setMustLeaveOilField(){return;}
     
     // Set number of ticks until next move
-    void setTicksToNextMove();
+    void setTicksToNextMove(){return;}
+    void setSquaresToMove(){m_numSquaresToMoveInCurrentDirection = 8;}
+    int getSquaresToMove(){return m_numSquaresToMoveInCurrentDirection;}
+    void decreaseSquaresToMove(){m_numSquaresToMoveInCurrentDirection--;}
+    private:
+    int m_numSquaresToMoveInCurrentDirection;
 };
 
 
@@ -144,9 +155,9 @@ public:
 class RegularProtester : public Protester
 {
 public:
-    RegularProtester(StudentWorld* world, int startX, int startY, int imageID);
+    RegularProtester(StudentWorld* world, int startX, int startY);
     virtual void move();
-    virtual void addGold();
+    virtual void addGold(){return;}
 };
 
 
@@ -156,9 +167,9 @@ public:
 class HardcoreProtester : public Protester
 {
 public:
-    HardcoreProtester(StudentWorld* world, int startX, int startY, int imageID);
-    virtual void move();
-    virtual void addGold();
+    HardcoreProtester(StudentWorld* world, int startX, int startY);
+    virtual void move(){return;}
+    virtual void addGold(){return;}
 };
 
 
@@ -196,6 +207,11 @@ class Squirt : public Actor
 public:
     Squirt(StudentWorld* world, int startX, int startY, Direction startDir);
     virtual void move();
+    virtual bool canIBePickedUp(){return true;}
+    int getTravelDistance(){return m_travelDistance;}
+    void decreaseTravelDistance(){m_travelDistance--;}
+private:
+    int m_travelDistance;
 };
 
 
@@ -213,6 +229,7 @@ public:
     
     // Set number of ticks until this object dies
     void setTicksToLive(){m_ticksToLive = 30;}
+    virtual bool canIBePickedUp(){return true;}
 private:
     int m_ticksToLive;
 };
@@ -236,8 +253,12 @@ public:
 class GoldNugget : public ActivatingObject
 {
 public:
-    GoldNugget(StudentWorld* world, int startX, int startY, bool temporary);
+    GoldNugget(StudentWorld* world, int startX, int startY);
     virtual void move();
+    void setDropped(){dropped = true;}
+    bool didDrop(){return dropped;}
+private:
+    bool dropped;
     
 };
 
@@ -249,7 +270,7 @@ class SonarKit : public ActivatingObject
 {
 public:
     SonarKit(StudentWorld* world, int startX, int startY);
-    virtual void move();
+    virtual void move(){return;}
     
 };
 
