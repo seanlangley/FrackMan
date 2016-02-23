@@ -46,6 +46,8 @@ bool StudentWorld::isThereDirt(int x, int y) const
     return false;
 }
 
+
+
 void StudentWorld::clearDirt(int x, int y)
 {
     if(isThereDirt(x,y))                                //If there's dirt at the player's location, delete the dirt
@@ -146,7 +148,35 @@ void StudentWorld::clearDead()
     
 }
 
-bool StudentWorld::isThereActor(int x, int y) 
+bool StudentWorld::isThereBoulder(int x, int y)
+{
+    for(vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); it++)
+    {
+        if((*it)->getID() != IID_BOULDER)
+            continue;
+        
+        int x1 = (**it).getX();
+        int y1 = (**it).getY();
+        
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < 4; k++)
+                if(x == x1 + i && y == y1 + k)
+                    return true;
+        
+    }
+    return false;
+}
+
+bool StudentWorld::isThereFrackMan(int x, int y)
+{
+    for(int i = 0; i < 4; i++)
+        for(int k = 0; k < 4; k++)
+            if(x == getPlayer()->getX() + i && y == getPlayer()->getY())
+                return true;
+    return false;
+}
+
+bool StudentWorld::isThereActor(int x, int y)
 {
     for(vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); it++)
     {
@@ -163,12 +193,29 @@ bool StudentWorld::isThereActor(int x, int y)
     
 }
 
+Actor* StudentWorld::getActor(int x, int y)
+{
+    for(vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); it++)
+    {
+        int x1 = (**it).getX();
+        int y1 = (**it).getY();
+        
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < 4; k++)
+                if(x == x1 + i && y == y1 + k)
+                    return *it;
+        
+    }
+    
+    return nullptr;
+}
+
 bool StudentWorld::isNearFrackMan(Actor *a, int radius)
 {
     for(int i = 0; i < radius; i++)
         for(int k = 0; k < radius; k++)
         {
-            if(a->getX() + i == m_player->getX() + i && a->getY() + k == m_player->getY() + k)
+            if(a->getX() + i == m_player->getX() + k && a->getY() + i == m_player->getY() + k)
                 return true;
         }
     return false;
@@ -186,23 +233,9 @@ bool StudentWorld::isInvalidRadius(int x, int y)
     return false;
 }
 
-void StudentWorld::addActor(Actor *a, int imageID)
+void StudentWorld::addActor(Actor *a)
 {
     
-    for(int k = 0; k < numObjects(imageID); k++)
-    {
-        int x = rand() % 56; int y = rand() % 56;
-        while(isInvalidRadius(x,y))
-        {
-            x = rand() % 56; y = rand() % 56;
-        }
-    
-        if(isThereDirt(x,y) || isThereDirt(x+4, y+4))
-        {
-            
-            m_actors.push_back(a);
-        }
-    }
     m_actors.push_back(a);
 }
 
@@ -240,10 +273,70 @@ void StudentWorld::addGold()
         if(isThereDirt(x,y) || isThereDirt(x+4, y+4))
         {
             
-            m_actors.push_back(new GoldNugget(this, x,y, true));
+            m_actors.push_back(new GoldNugget(this, x,y));
         }
         else --k;
     }
+}
+
+bool StudentWorld::facingTowardFrackMan(Actor *a) const
+{
+    ActivatingObject::Direction dir = a->getDirection();
+    int actorX = a->getX();
+    int actorY = a->getY();
+    int playerX = m_player->getX();
+    int playerY = m_player->getY();
+    
+    switch(dir)
+    {
+        case ActivatingObject::up:
+            while(m_dirt[actorX][actorY] == nullptr)
+            {
+                if(actorX == playerX && actorY == playerY)
+                    return true;
+                else
+                    actorY--;
+            }
+            break;
+            
+        case ActivatingObject::down:
+            while(m_dirt[actorX][actorY] == nullptr)
+            {
+                if(actorX == playerX && actorY == playerY)
+                    return true;
+                else
+                    actorY++;
+            }
+            break;
+            
+        case ActivatingObject::left:
+            while(m_dirt[actorX][actorY] == nullptr)
+            {
+                if(actorX == playerX && actorY == playerY)
+                    return true;
+                else
+                    actorX--;
+            }
+            break;
+            
+        case ActivatingObject::right:
+            while(m_dirt[actorX][actorY] == nullptr)
+            {
+                if(actorX == playerX && actorY == playerY)
+                    return true;
+                else
+                    actorX++;
+            }
+            break;
+            
+        case ActivatingObject::none: break;
+    }
+    return false;
+}
+
+void StudentWorld::addRegularProtestors()
+{
+    m_actors.push_back(new RegularProtester(this, 40, 60));
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -258,35 +351,37 @@ int StudentWorld::init()
     addBoulders();
     addOil();
     addGold();
-    m_player = new FrackMan(this, 30, 60);
+    addRegularProtestors();
+    
+    m_actors.push_back(new SonarKit(this, 40,60));
+    
+    m_player = new FrackMan(this);
     return GWSTATUS_CONTINUE_GAME;
 }
 
 int StudentWorld::move()
 {
     setGameStatText("");
-    
     if(m_player->isAlive())
     {
         
         m_player->move();
         for(vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); it++)
-        {
             (*it)->move();
-            
-            ///////////FIGURE OUT HOW TO DELETE ACTORS HERE
-            
-        }
+        
         
         clearDirt(m_player->getX(), m_player->getY());
         clearDead();
         
     }
     
+    else
+        return GWSTATUS_PLAYER_DIED;
     if(m_numBarrels > 0)
         return GWSTATUS_CONTINUE_GAME;
     if(m_numBarrels == 0)
         return GWSTATUS_FINISHED_LEVEL;
+    
     
     
     return GWSTATUS_PLAYER_DIED;
