@@ -1,236 +1,273 @@
+// Possible interfaces for actors.  You may use all, some, or none
+// of this, as you wish.
+
 #ifndef ACTOR_H_
 #define ACTOR_H_
 
 #include "GraphObject.h"
 
-const int BOULDER = 0;
-const int SQUIRT = 1;
-const int BARREL_OF_OIL = 2;
-const int GOLD_NUGGET = 3;
-const int SONAR_KIT = 4;
-const int WATER_POOL = 5;
-const int REGULAR_PROTESTOR = 6;
-const int HARDCORE_PROTESTOR = 7;
-
-// Students:  Add code to this file, Actor.cpp, StudentWorld.h, and StudentWorld.cpp
 class StudentWorld;
+
+
 ////////////////////////////////////////////////////////////////////////////////
-// Actor Definition
+// Actor Interface
 ////////////////////////////////////////////////////////////////////////////////
 class Actor : public GraphObject
 {
 public:
-    Actor(int IID, int x, int y, Direction dir, float size, unsigned int depth, StudentWorld* sw);
-    virtual ~Actor();
-    virtual void doSomething() = 0;
-    virtual void getAnnoyed() = 0;
-    virtual StudentWorld* getWorld(){return m_world;}
-    bool isDead() const {return m_dead;}
-    void setDead() {m_dead = true;}
-private:
-    StudentWorld* m_world;
-    bool m_dead;
-   
+    Actor(StudentWorld* world, int startX, int startY, Direction startDir,
+          bool visible, int imageID, double size, int depth);
     
+    // Action to perform each tick.
+    virtual void move() = 0;
+    
+    // Is this actor alive?
+    bool isAlive() const {if(m_isAlive) return true; else return false;}
+    
+    // Mark this actor as dead.
+    void setDead() {m_isAlive = false;}
+    
+    // Annoy this actor.
+    virtual bool annoy(unsigned int amt){return 0;}
+    
+    // Get this actor's world
+    StudentWorld* getWorld() const{return m_world;}
+    
+    // Can other actors pass through this actor?
+    virtual bool canActorsPassThroughMe() const{return true;}
+    
+    // Can this actor dig through dirt?
+    virtual bool canDigThroughDirt() const{return true;}
+    
+    // Can this actor pick items up?
+    virtual bool canPickThingsUp() const{return true;}
+    
+    // Does this actor hunt the FrackMan?
+    virtual bool huntsFrackMan() const{return true;}
+    
+    // Can this actor need to be picked up to finish the level?
+    virtual bool needsToBePickedUpToFinishLevel() const{return false;}
+    
+    // Move this actor to x,y if possible, and return true; otherwise,
+    // return false without moving.
+    bool moveToIfPossible(int x, int y){return true;}
+private:
+    bool m_isAlive;
+    StudentWorld* m_world;
 };
-#endif // ACTOR_H_
+
 
 ////////////////////////////////////////////////////////////////////////////////
-// Dirt Definition
+// Agent Interface
 ////////////////////////////////////////////////////////////////////////////////
+class Agent : public Actor
+{
+public:
+    Agent(StudentWorld* world, int startX, int startY, Direction startDir,
+          int imageID, double size, int depth, unsigned int hitPoints)
+    :Actor(world, startX, startY, startDir, true, imageID, size, depth), m_hitPoints(hitPoints){}
+    
+    // Pick up a gold nugget.
+    virtual void addGold() = 0;
+    
+    // How many hit points does this actor have left?
+    unsigned int getHitPoints() const{return 0;}
+    
+    virtual bool annoy(unsigned int amount){return true;}
+    virtual bool canPickThingsUp() const{return true;}
+private:
+    int m_hitPoints;
+};
 
-#ifndef DIRT_H
-#define DIRT_H
 
+////////////////////////////////////////////////////////////////////////////////
+// FrackMan Interface
+////////////////////////////////////////////////////////////////////////////////
+class FrackMan : public Agent
+{
+public:
+    FrackMan(StudentWorld* world, int startX, int startY);
+    virtual void move();
+    virtual bool annoy(unsigned int amount){return true;}
+    virtual void addGold(){m_numNuggets++;}
+    virtual bool canDigThroughDirt() const{return true;}
+    
+    // Pick up a sonar kit.
+    void addSonar(){m_numSonar++;}
+    
+    // Pick up water.
+    void addWater(){m_numWater++;}
+    
+    // Get amount of gold
+    unsigned int getGold() const{return m_numNuggets;}
+    
+    // Get amount of sonar charges
+    unsigned int getSonar() const{return m_numSonar;}
+    
+    // Get amount of water
+    unsigned int getWater() const{return m_numWater;}
+    void increaseScore(int score){m_score += score;}
+    
+    void go(Direction dir);
+private:
+    int m_score;
+    int m_numNuggets;
+    int m_numSonar;
+    int m_numWater;
+};
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Protestor Interface
+////////////////////////////////////////////////////////////////////////////////
+class Protester : public Agent
+{
+public:
+    Protester(StudentWorld* world, int startX, int startY, int imageID,
+              unsigned int hitPoints, unsigned int score);
+    virtual void move();
+    virtual bool annoy(unsigned int amount);
+    virtual void addGold();
+    virtual bool huntsFrackMan() const;
+    
+    // Set state to having gien up protest
+    void setMustLeaveOilField();
+    
+    // Set number of ticks until next move
+    void setTicksToNextMove();
+};
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Regular Protestor Interface
+////////////////////////////////////////////////////////////////////////////////
+class RegularProtester : public Protester
+{
+public:
+    RegularProtester(StudentWorld* world, int startX, int startY, int imageID);
+    virtual void move();
+    virtual void addGold();
+};
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Hardcore Protestor Interface
+////////////////////////////////////////////////////////////////////////////////
+class HardcoreProtester : public Protester
+{
+public:
+    HardcoreProtester(StudentWorld* world, int startX, int startY, int imageID);
+    virtual void move();
+    virtual void addGold();
+};
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Dirt Interface
+////////////////////////////////////////////////////////////////////////////////
 class Dirt : public Actor
 {
 public:
-    Dirt(int x, int y, StudentWorld* sw);
-    virtual ~Dirt();
-    virtual void doSomething(){return;}
-    virtual void getAnnoyed(){return;}
-
+    Dirt(StudentWorld* world, int startX, int startY);
+    virtual void move(){return;}
 };
 
-#endif // DIRT_H_
 
 ////////////////////////////////////////////////////////////////////////////////
-// FrackMan Definition
+// Boulder Interface
 ////////////////////////////////////////////////////////////////////////////////
-
-#ifndef FRACKMAN_H
-#define FRACKMAN_H
-
-class FrackMan : public Actor
-{
-public:
-    FrackMan(StudentWorld* sw);
-    
-    virtual ~FrackMan();
-    virtual void doSomething();
-    virtual void getAnnoyed();
-    int getHealth(){return m_health;}
-    void move(Direction dir);
-    void setDead();
-    void react(int Actor);
-    void increaseScore(int points){m_score += points;}
-    bool isWithinRadius(Actor* actor);
-    
-private:
-    int m_health;
-    int m_score;
-    
-    
-
-    
-};
-#endif // FRACKMAN_H_
-
-////////////////////////////////////////////////////////////////////////////////
-// Boulders Definition
-////////////////////////////////////////////////////////////////////////////////
-#ifndef BOULDER_H
-#define BOULDER_H
-
-const int STABLE = 0;
-const int WAITING = 1;
-const int FALLING = 2;
-
-
 class Boulder : public Actor
 {
 public:
-    Boulder(int x, int y, StudentWorld* sw);
-    virtual ~Boulder(){return;}
-    virtual void doSomething();
-    virtual void getAnnoyed(){return;}
-    int state(){return m_state;}
+    Boulder(StudentWorld* world, int startX, int startY) ;
+    virtual void move();
+    virtual bool canActorsPassThroughMe() const{return false;}
 private:
-    int m_state;
     int m_count;
+    bool moved;
 };
 
-#endif // BOULDER_H_
-////////////////////////////////////////////////////////////////////////////////
-// Squirt Definition
-////////////////////////////////////////////////////////////////////////////////
-#ifndef SQUIRT_H
-#define SQUIRT_H
 
+////////////////////////////////////////////////////////////////////////////////
+// Squirt Interface
+////////////////////////////////////////////////////////////////////////////////
 class Squirt : public Actor
 {
 public:
-    Squirt(int x, int y, Direction dir, StudentWorld* sw);
-    virtual ~Squirt(){return;}
-    virtual void doSomething(){return;}
-    virtual void getAnnoyed(){return;}
+    Squirt(StudentWorld* world, int startX, int startY, Direction startDir);
+    virtual void move();
 };
 
-#endif // SQUIRT_H_
 
 ////////////////////////////////////////////////////////////////////////////////
-// Barrel of Oil Definition
+// Activating Object Interface
 ////////////////////////////////////////////////////////////////////////////////
-#ifndef BARREL_OF_OIL_H
-#define BARREL_OF_OIL_H
-
-class BarrelOfOil : public Actor
+class ActivatingObject : public Actor
 {
 public:
-    BarrelOfOil(int x, int y, StudentWorld* sw);
-    virtual ~BarrelOfOil(){return;}
-    virtual void doSomething();
-    virtual void getAnnoyed();
-};
-
-#endif // BARREL_OF_OIL_H
-////////////////////////////////////////////////////////////////////////////////
-// Gold Nugget Definition
-////////////////////////////////////////////////////////////////////////////////
-#ifndef GOLD_NUGGET_H
-#define GOLD_NUGGET_H
-
-class GoldNugget : public Actor
-{
-public:
-    GoldNugget(int x, int y, bool isVisible, StudentWorld* sw);
-    virtual ~GoldNugget(){return;}
-    virtual void doSomething(){return;}
-    virtual void getAnnoyed(){return;}
+    ActivatingObject(StudentWorld* world, int startX, int startY, int imageID,
+                     int soundToPlay, bool activateOnPlayer,
+                     bool activateOnProtester, bool initallyActive)
+    :Actor(world, startX, startY, right, true, imageID, 1.0, 2), m_ticksToLive(30){}
+    virtual void move(){return;}
+    
+    // Set number of ticks until this object dies
+    void setTicksToLive(){m_ticksToLive = 30;}
 private:
-    //Timestate Variable goes here
+    int m_ticksToLive;
 };
 
-#endif // GOLD_NUGGET_H
-////////////////////////////////////////////////////////////////////////////////
-// Sonar Kit Definition
-////////////////////////////////////////////////////////////////////////////////
-#ifndef SONAR_KIT_H
-#define SONAR_KIT_H
 
-class SonarKit : public Actor
+////////////////////////////////////////////////////////////////////////////////
+// Oil barrel Interface
+////////////////////////////////////////////////////////////////////////////////
+class OilBarrel : public ActivatingObject
 {
 public:
-    SonarKit(int x, int y, StudentWorld* sw);
-    virtual ~SonarKit(){return;}
-    virtual void doSomething(){return;}
-    virtual void getAnnoyed(){return;}
+    OilBarrel(StudentWorld* world, int startX, int startY);
+    virtual void move();
+    virtual bool needsToBePickedUpToFinishLevel() const;
 };
 
-#endif // SONAR_KIT_H
-////////////////////////////////////////////////////////////////////////////////
-// Water Pool Definition
-////////////////////////////////////////////////////////////////////////////////
-#ifndef WATER_POOL_H
-#define WATER_POOL_H
 
-class WaterPool : public Actor
+////////////////////////////////////////////////////////////////////////////////
+// Gold Nugget Interface
+////////////////////////////////////////////////////////////////////////////////
+class GoldNugget : public ActivatingObject
 {
 public:
-    WaterPool(int x, int y, StudentWorld* sw);
-    virtual ~WaterPool(){return;}
-    virtual void doSomething(){return;}
-    virtual void getAnnoyed(){return;}
+    GoldNugget(StudentWorld* world, int startX, int startY, bool temporary);
+    virtual void move();
+    
 };
 
-#endif // WATER_POOL_H
-////////////////////////////////////////////////////////////////////////////////
-// Regular Protestor Definition
-////////////////////////////////////////////////////////////////////////////////
-#ifndef REGULAR_PROTESTOR_H
-#define REGULAR_PROTESTOR_H
 
-class RegularProtestor : public Actor
+////////////////////////////////////////////////////////////////////////////////
+// Sonar Kit Interface
+////////////////////////////////////////////////////////////////////////////////
+class SonarKit : public ActivatingObject
 {
 public:
-    RegularProtestor(int x, int y, StudentWorld* sw);
-    virtual ~RegularProtestor(){return;}
-    virtual void doSomething(){return;}
-    virtual void getAnnoyed(){return;}
+    SonarKit(StudentWorld* world, int startX, int startY);
+    virtual void move();
+    
 };
 
-#endif // REGULAR_PROTESTOR_H
-////////////////////////////////////////////////////////////////////////////////
-// Hardcore Protestor Definition
-////////////////////////////////////////////////////////////////////////////////
-#ifndef HARDCORE_PROTESTOR_H
-#define HARDCORE_PROTESTOR_H
 
-class HardcoreProtestor : public RegularProtestor
+////////////////////////////////////////////////////////////////////////////////
+// Water Pool Interface
+////////////////////////////////////////////////////////////////////////////////
+class WaterPool : public ActivatingObject
 {
 public:
-    HardcoreProtestor(int x, int y, StudentWorld* sw);
-    virtual ~HardcoreProtestor(){return;}
-    virtual void doSomething(){return;}
-    virtual void getAnnoyed(){return;}
+    WaterPool(StudentWorld* world, int startX, int startY);
+    virtual void move();
+    virtual bool needsToBePickedUpToFinishLevel() const{return false;}
 };
 
-#endif // HARDCORE_PROTESTOR_H
 
 
-
-
-
+#endif // ACTOR_H_
 
 
 
