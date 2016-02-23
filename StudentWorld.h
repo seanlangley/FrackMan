@@ -24,7 +24,7 @@ public:
     virtual void cleanUp();
     
     // Add an actor to the world.
-    void addActor(Actor* a, int numObjects);
+    void addActor(Actor* a);
     
     // Clear a 4x4 region of dirt.
     void clearDirt(int x, int y);
@@ -57,7 +57,7 @@ public:
     //    void giveFrackManWater();
     
     // Is the Actor a facing toward the FrackMan?
-    //    bool facingTowardFrackMan(Actor* a) const;
+    bool facingTowardFrackMan(Actor* a) const;
     
     // If the Actor a has a clear line of sight to the FrackMan, return
     // the direction to the FrackMan, otherwise GraphObject::none.
@@ -78,12 +78,18 @@ public:
     void addBoulders();
     void addOil();
     void addGold();
+    void addRegularProtestors();
     bool isThereDirt(int x, int y) const;
     bool isInvalidRadius(int x, int y);
     bool isThereActor(int x, int y);
+    bool isThereBoulder(int x, int y);
+    bool isThereFrackMan(int x, int y);
     int numObjects(int IID);
     void clearDead();
     void gotBarrel(){m_numBarrels--;}
+    int numBarrels(){return m_numBarrels;}
+    
+    Actor* getActor(int x, int y);
     FrackMan* getPlayer(){return m_player;}
     
 private:
