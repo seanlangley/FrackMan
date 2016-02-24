@@ -13,23 +13,83 @@ Actor::Actor(StudentWorld* world, int startX, int startY, Direction startDir,
 {
     if(world == nullptr)
         exit(1);
-    setVisible(true);
+    setVisible(visible);
 }
 
 
 
+////////////////////////////////////////////////////////////////////////////////
+// Activating Object Implementation
+////////////////////////////////////////////////////////////////////////////////
 
+ActivatingObject::ActivatingObject(StudentWorld* world, int startX, int startY, int imageID,
+                                   int soundToPlay, bool activateOnPlayer,
+                                   bool activateOnProtester, bool initallyActive, Direction dir, bool visible)
+:Actor(world, startX, startY, dir, visible, imageID, 1.0, 1)
+{
+    switch(imageID)
+    {
+        case IID_GOLD:
+        case IID_BARREL: m_ticksToLive = -1; break;
+        case IID_SONAR:
+        case IID_WATER_POOL:
+            if(300 - getWorld()->getLevel() < 100)
+                m_ticksToLive =  300 - getWorld()->getLevel();
+            else
+                m_ticksToLive = 300;
+            break;
+            
+        default: m_ticksToLive = -1; break;
+            
+    }
+}
+
+void ActivatingObject::move()
+{
+
+    
+    if(getTicksToLive() > 0)
+    {
+
+        decreaseTicksToLive();
+        return;
+        
+    }
+    else
+        setDead();
+    
+}
+
+void ActivatingObject::setTicksToLive()
+{
+    if(300 - getWorld()->getLevel() < 100)
+        m_ticksToLive = 300 - getWorld()->getLevel();
+    else
+        m_ticksToLive = 300;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // FrackMan Implementation
 ////////////////////////////////////////////////////////////////////////////////
 
 FrackMan::FrackMan(StudentWorld* world)
-:Agent(world, 30, 60, right, IID_PLAYER, 1.0, 0, 100), m_score(0), m_numNuggets(0), m_numWater(5)
+:Agent(world, 30, 60, right, IID_PLAYER, 1.0, 0, 100), m_score(0), m_numNuggets(0), m_numWater(5), m_numSonar(1)
 {}
 
+void FrackMan::addSonar()
+{
+    m_numSonar++; getWorld()->increaseScore(75);
+}
 
+void FrackMan::addGold()
+{
+    m_numNuggets++; getWorld()->increaseScore(10);
+}
 
+void FrackMan::addWater()
+{
+    m_numWater += 5; getWorld()->increaseScore(100);
+}
 
 void FrackMan::move()
 {
@@ -46,7 +106,9 @@ void FrackMan::move()
             case KEY_PRESS_UP: go(up); break;
             case KEY_PRESS_TAB: dropGold(getDirection()); break;
             case KEY_PRESS_SPACE: shootGun(); break;
-               
+            case KEY_PRESS_ESCAPE: setDead(); break;
+            case 'z':
+            case 'Z': getWorld()->revealObjects(); decreaseSonar(); break;
                 
         }
     }
@@ -60,6 +122,7 @@ void FrackMan::shootGun()
         return;
     int x = 0, y = 0;
     Direction dir;
+    getWorld()->playSound(SOUND_PLAYER_SQUIRT);
     switch(getDirection())
     {
         case up: y = 3; dir = up; break;
@@ -70,6 +133,7 @@ void FrackMan::shootGun()
     }
     Squirt* temp = new Squirt(getWorld(), getX() + x, getY() + y, dir);
     getWorld()->addActor(temp);
+    decreaseAmmo();
     
 }
 
@@ -102,21 +166,26 @@ void FrackMan::dropGold(GraphObject::Direction dir)
     if(getGold() <= 0)
         return;
     m_numNuggets--;
+    int x = 0, y = 0;
     switch(dir)
     {
         case up:
-            getWorld()->addActor(new GoldNugget(getWorld(), getX(), getY()+3)); break;
+            x = 0; y = 3; break;
         case down:
-            getWorld()->addActor(new GoldNugget(getWorld(), getX(), getY()-3)); break;
+            x = 0; y = -3; break;
         case left:
-            getWorld()->addActor(new GoldNugget(getWorld(), getX()-3, getY())); break;
+            x = -3; y = 0; break;
         case right:
-            getWorld()->addActor(new GoldNugget(getWorld(), getX()+4, getY())); break;
+            x = 4; y = 0; break;
         case none: break;
             
         
     }
+    GoldNugget* temp = new GoldNugget(getWorld(), getX()+x, getY()+y, true);
+    getWorld()->addActor(temp);
+    temp->setTicksToLive();
 }
+
 
 void FrackMan::go(Direction dir)
 {
@@ -125,7 +194,11 @@ void FrackMan::go(Direction dir)
         case left:
             if(getWorld()->isThereBoulder(getX()-1, getY()) || getWorld()->isThereBoulder(getX()-1, getY()+3))
                 break;
-            setDirection(left);
+            if(getDirection() != left)
+            {
+                setDirection(left);
+                break;
+            }
             if(getX() > 0)
                 moveTo(getX()-1, getY());
             else
@@ -134,7 +207,11 @@ void FrackMan::go(Direction dir)
         case right:
             if(getWorld()->isThereBoulder(getX()+4, getY()) || getWorld()->isThereBoulder(getX()+4, getY()+3))
                 break;
-            setDirection(right);
+            if(getDirection() != right)
+            {
+                setDirection(right);
+                break;
+            }
             if(getX() < 60)
                 moveTo(getX()+1, getY());
             else
@@ -143,7 +220,11 @@ void FrackMan::go(Direction dir)
         case down:
             if(getWorld()->isThereBoulder(getX(), getY()-1) || getWorld()->isThereBoulder(getX()+3, getY()-1))
                 break;
-            setDirection(down);
+            if(getDirection() != down)
+            {
+                setDirection(down);
+                break;
+            }
             if(getY() > 0)
                 moveTo(getX(), getY()-1);
             else
@@ -152,7 +233,11 @@ void FrackMan::go(Direction dir)
         case up:
             if(getWorld()->isThereBoulder(getX(), getY()+4) || getWorld()->isThereBoulder(getX()+3, getY()+4))
                 break;
-            setDirection(up);
+            if(getDirection() != up)
+            {
+                setDirection(up);
+                break;
+            }
             if(getY() < 60)
                 moveTo(getX(), getY()+1);
             else
@@ -259,19 +344,23 @@ void Boulder::move()
 // Oil Implementation
 ////////////////////////////////////////////////////////////////////////////////
 OilBarrel::OilBarrel(StudentWorld* world, int startX, int startY)
-:ActivatingObject(world, startX, startY, IID_BARREL, SOUND_FOUND_OIL, true, false, false)
+:ActivatingObject(world, startX, startY, IID_BARREL, SOUND_FOUND_OIL, true, false, false, right, false)
 {setVisible(true);}
 
 void OilBarrel::move()
 {
     if(! isAlive())
         return;
+
     if(isVisible() == false && getWorld()->isNearFrackMan(this, 10))
+    {
        setVisible(true);
+        return;
+    }
     if(isVisible() == true && getWorld()->isNearFrackMan(this, 5))
     {
         getWorld()->playSound(SOUND_FOUND_OIL);
-        getWorld()->getPlayer()->increaseScore(1000);
+        getWorld()->increaseScore(1000);
         getWorld()->gotBarrel();
         setDead();
     }
@@ -282,8 +371,8 @@ bool OilBarrel::needsToBePickedUpToFinishLevel()const {return true;}
 ////////////////////////////////////////////////////////////////////////////////
 // Gold Nugget Implementation
 ////////////////////////////////////////////////////////////////////////////////
-GoldNugget::GoldNugget(StudentWorld* world, int startX, int startY)
-:ActivatingObject(world, startX, startY, IID_GOLD, SOUND_GOT_GOODIE, true, false, false), dropped(false)
+GoldNugget::GoldNugget(StudentWorld* world, int startX, int startY, bool visible)
+:ActivatingObject(world, startX, startY, IID_GOLD, SOUND_GOT_GOODIE, true, false, false, left, false), dropped(false)
 {
 }
 
@@ -291,20 +380,48 @@ void GoldNugget::move()
 {
     if(! isAlive())
         return;
+    
+    if(getTicksToLive() >= 0)
+    {
+        if(getTicksToLive() == 0)
+        {
+            setDead();
+            return;
+        }
+        
+        else decreaseTicksToLive();
+    }
+    
+    if(isVisible() == false && getWorld()->isNearFrackMan(this, 10))
+    {
+        setVisible(true);
+        return;
+    }
+    
     if(isVisible() == true && getWorld()->isNearFrackMan(this, 5))
     {
         getWorld()->playSound(SOUND_GOT_GOODIE);
-        getWorld()->getPlayer()->increaseScore(10);
+        getWorld()->increaseScore(10);
+        getWorld()->getPlayer()->addGold();
         setDead();
     }
 }
 
 
 ////////////////////////////////////////////////////////////////////////////////
+// Water Pool Implementation
+////////////////////////////////////////////////////////////////////////////////
+WaterPool::WaterPool(StudentWorld* world, int startX, int startY)
+:ActivatingObject(world, startX, startY, IID_WATER_POOL, SOUND_GOT_GOODIE, true, false, false, right, true){}
+
+
+////////////////////////////////////////////////////////////////////////////////
 // Sonar Kit Implementation
 ////////////////////////////////////////////////////////////////////////////////
 SonarKit::SonarKit(StudentWorld* world, int startX, int startY)
-:ActivatingObject(world, startX, startY, IID_SONAR, SOUND_GOT_GOODIE, true, false, false){}
+:ActivatingObject(world, startX, startY, IID_SONAR, SOUND_GOT_GOODIE, true, false, false, left, true){}
+
+
 
 
 ////////////////////////////////////////////////////////////////////////////////
