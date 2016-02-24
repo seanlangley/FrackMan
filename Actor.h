@@ -73,7 +73,7 @@ public:
     virtual void addGold() = 0;
     
     // How many hit points does this actor have left?
-    unsigned int getHitPoints() const{return 0;}
+    unsigned int getHitPoints() const{return m_hitPoints;}
     
     virtual bool annoy(unsigned int amount){return true;}
     virtual bool canPickThingsUp() const{return true;}
@@ -91,15 +91,15 @@ public:
     FrackMan(StudentWorld* world);
     virtual void move();
     virtual bool annoy(unsigned int amount){return true;}
-    virtual void addGold(){m_numNuggets++; increaseScore(10);}
     virtual bool canDigThroughDirt() const{return true;}
     
     
     // Pick up a sonar kit.
-    void addSonar(){m_numSonar++; increaseScore(75);}
-    
+    void addSonar();
+    void decreaseSonar(){m_numSonar--;}
+    void addGold();
     // Pick up water.
-    void addWater(){m_numWater++; increaseScore(100);}
+    void addWater();
     
     // Get amount of gold
     unsigned int getGold() const{return m_numNuggets;}
@@ -109,11 +109,10 @@ public:
     
     // Get amount of water
     unsigned int getWater() const{return m_numWater;}
-    void increaseScore(int score){m_score += score;}
     void dropGold(Direction dir);
     void getGoodie();
     void shootGun();
-    
+    void decreaseAmmo(){m_numWater--;}
     void go(Direction dir);
 private:
     int m_score;
@@ -223,12 +222,11 @@ class ActivatingObject : public Actor
 public:
     ActivatingObject(StudentWorld* world, int startX, int startY, int imageID,
                      int soundToPlay, bool activateOnPlayer,
-                     bool activateOnProtester, bool initallyActive)
-    :Actor(world, startX, startY, right, true, imageID, 1.0, 2), m_ticksToLive(30){}
-    virtual void move(){return;}
-    
-    // Set number of ticks until this object dies
-    void setTicksToLive(){m_ticksToLive = 30;}
+                     bool activateOnProtester, bool initallyActive, Direction dir, bool visible);
+    virtual void move();
+    virtual void setTicksToLive();
+    int getTicksToLive(){return m_ticksToLive;}
+    void decreaseTicksToLive(){m_ticksToLive--;}
     virtual bool canIBePickedUp(){return true;}
 private:
     int m_ticksToLive;
@@ -253,7 +251,7 @@ public:
 class GoldNugget : public ActivatingObject
 {
 public:
-    GoldNugget(StudentWorld* world, int startX, int startY);
+    GoldNugget(StudentWorld* world, int startX, int startY, bool visible);
     virtual void move();
     void setDropped(){dropped = true;}
     bool didDrop(){return dropped;}
@@ -270,8 +268,7 @@ class SonarKit : public ActivatingObject
 {
 public:
     SonarKit(StudentWorld* world, int startX, int startY);
-    virtual void move(){return;}
-    
+//    virtual void move();
 };
 
 
@@ -282,7 +279,7 @@ class WaterPool : public ActivatingObject
 {
 public:
     WaterPool(StudentWorld* world, int startX, int startY);
-    virtual void move();
+//    virtual void move();
     virtual bool needsToBePickedUpToFinishLevel() const{return false;}
 };
 
