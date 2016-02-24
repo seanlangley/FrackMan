@@ -1,5 +1,6 @@
 #include "StudentWorld.h"
 #include <string>
+#include <sstream>
 using namespace std;
 
 GameWorld* createStudentWorld(string assetDir)
@@ -10,7 +11,7 @@ GameWorld* createStudentWorld(string assetDir)
 // Students:  Add code to this file (if you wish), StudentWorld.h, Actor.h and Actor.cpp
 
 StudentWorld::StudentWorld(std::string assetDir)
-: GameWorld(assetDir)
+: GameWorld(assetDir), m_ticks(0)
 {}
 
 StudentWorld::~StudentWorld()
@@ -87,6 +88,10 @@ int StudentWorld::numObjects(int IID)
                 return 5 - getLevel()/2;
             else return 2;
             break;
+        case IID_PROTESTER:
+            if(2 + getLevel()*1.5 < 15)
+                return 2 + getLevel()*1.5;
+            else return 15;
         default:
             return 0; break;
             
@@ -217,6 +222,8 @@ bool StudentWorld::isNearFrackMan(Actor *a, int radius)
         {
             if(a->getX() + i == m_player->getX() + k && a->getY() + i == m_player->getY() + k)
                 return true;
+            if(a->getX() - i == m_player->getX() - k && a->getY() - i == m_player->getY() - k)
+                return true;
         }
     return false;
     
@@ -273,7 +280,7 @@ void StudentWorld::addGold()
         if(isThereDirt(x,y) || isThereDirt(x+4, y+4))
         {
             
-            m_actors.push_back(new GoldNugget(this, x,y));
+            m_actors.push_back(new GoldNugget(this, x,y, false));
         }
         else --k;
     }
@@ -334,9 +341,125 @@ bool StudentWorld::facingTowardFrackMan(Actor *a) const
     return false;
 }
 
-void StudentWorld::addRegularProtestors()
+
+
+void StudentWorld::revealObjects()
+{}
+
+
+
+void StudentWorld::addNewActors()
 {
-    m_actors.push_back(new RegularProtester(this, 40, 60));
+    int count = 0;
+    for(vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); it++)
+        if((*it)->getID() == IID_SONAR)
+            count++;
+    int prob = getLevel()*25 + 300;
+    int randInt = rand() % prob + 1;
+    if(randInt == prob)
+    {
+        int probInt2 = rand() % 5 + 1;
+        if(probInt2 < 5)
+        {
+            int x = rand() % 60; int y = rand() % 60;
+            while(isThereDirt(x,y))
+            {
+                x = rand() % 64; y = rand() % 60;
+            }
+            m_actors.push_back(new WaterPool(this, x,y));
+        }
+        
+        else if(probInt2 == 5)
+            if(count == 0)
+                m_actors.push_back(new SonarKit(this, 20,60));
+        
+    }
+    
+}
+
+void StudentWorld::addNewProtestors()
+{
+    int count = 0;
+    int prob = 0;
+    if(getLevel() * 10 + 30 > 90)
+        prob = getLevel() * 10 + 30;
+    
+    else prob = 90;
+    bool regProt = false;
+    int probInt = rand() % prob + 1;
+    
+    if(probInt == prob)
+        regProt = false;
+    else regProt = true;
+    
+    
+    for(vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); it++)
+        if((*it)->getID() == IID_PROTESTER)
+            count++;
+    if(count == 0)
+    {
+        if(regProt)
+            m_actors.push_back(new RegularProtester(this, 60,60));
+        else
+            m_actors.push_back(new HardcoreProtester(this, 60,60));
+    }
+    if(count >= numObjects(IID_PROTESTER))
+        return;
+    
+    int maxTicks = 0;
+    if(200 - getLevel() > 15)
+        maxTicks = 200 - getLevel();
+    else maxTicks = 15;
+    
+    if(m_ticks < maxTicks)
+    {
+        cout << m_ticks << endl;
+        m_ticks++;
+        return;
+    }
+    
+    else
+    {
+        if(regProt)
+            m_actors.push_back(new RegularProtester(this, 60,60));
+        else
+            m_actors.push_back(new HardcoreProtester(this, 60,60));
+        m_ticks = 0;
+    }
+    
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// String Managing Functions
+////////////////////////////////////////////////////////////////////////////////
+string StudentWorld::setScoreString(int score)
+{
+    stringstream ss;
+    
+    // the number is converted to string with the help of stringstream
+    ss << score;
+    string ret;
+    ss >> ret;
+    
+    // Append zero chars
+    int str_length = static_cast<int>(ret.length());
+    for (int i = 0; i < 6 - str_length; i++)
+        ret = "0" + ret;
+    return ret;
+}
+
+
+void StudentWorld::setGameString(string &s)
+{
+    
+    string j = setScoreString(getScore());
+    ostringstream oss;
+    oss.setf(ios::fixed);
+    oss.precision(2);
+    
+    oss << "Scr: " << j << " Lvl: " << getLevel()+1 << "  Lives: " << getLives() << "  Hlth: " << getPlayer()->getHitPoints() <<
+    "%  Water: " << getPlayer()->getWater() << "  Gld: " << getPlayer()->getGold() << "  Sonar: " << getPlayer()->getSonar() << "  Oil Left: " << m_numBarrels;
+    s = oss.str();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -351,9 +474,6 @@ int StudentWorld::init()
     addBoulders();
     addOil();
     addGold();
-    addRegularProtestors();
-    
-    m_actors.push_back(new SonarKit(this, 40,60));
     
     m_player = new FrackMan(this);
     return GWSTATUS_CONTINUE_GAME;
@@ -361,10 +481,15 @@ int StudentWorld::init()
 
 int StudentWorld::move()
 {
-    setGameStatText("");
+    string s;
+    setGameString(s);
+    setGameStatText(s);
+    
+    addNewActors();
+    addNewProtestors();
+    
     if(m_player->isAlive())
     {
-        
         m_player->move();
         for(vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); it++)
             (*it)->move();
@@ -375,17 +500,24 @@ int StudentWorld::move()
         
     }
     
+    
     else
+    {
+        decLives();
         return GWSTATUS_PLAYER_DIED;
+    }
+    
     if(m_numBarrels > 0)
         return GWSTATUS_CONTINUE_GAME;
-    if(m_numBarrels == 0)
+    else if(m_numBarrels == 0)
         return GWSTATUS_FINISHED_LEVEL;
-    
+
     
     
     return GWSTATUS_PLAYER_DIED;
 }
+
+
 
 
 void StudentWorld::cleanUp()
