@@ -24,13 +24,13 @@ public:
     virtual void cleanUp();
     
     // Add an actor to the world.
-    void addActor(Actor* a);
+    
     
     // Clear a 4x4 region of dirt.
-    void clearDirt(int x, int y);
+    
     
     // Can actor move to x,y?
-    bool canActorMoveTo(Actor* a, int x, int y) const;
+    
     
     // Annoy all other actors within radius of annoyer, returning the
     // number of actors annoyed.
@@ -57,14 +57,14 @@ public:
     //    void giveFrackManWater();
     
     // Is the Actor a facing toward the FrackMan?
-    bool facingTowardFrackMan(Actor* a) const;
+    
     
     // If the Actor a has a clear line of sight to the FrackMan, return
     // the direction to the FrackMan, otherwise GraphObject::none.
     //    GraphObject::Direction lineOfSightToFrackMan(Actor* a) const;
     
     // Return whether the Actor a is within radius of FrackMan.
-    bool isNearFrackMan(Actor* a, int radius);
+    
     
     // Determine the direction of the first move a quitting protester
     // makes to leave the oil field.
@@ -78,16 +78,31 @@ public:
     void addBoulders();
     void addOil();
     void addGold();
-    void addRegularProtestors();
+    void setGameString(string& s);
+    void clearDirt(int x, int y);
+    void addActor(Actor* a);
+    void addNewActors();
+    void addNewProtestors();
+    string setScoreString(int score);
+    
     bool isThereDirt(int x, int y) const;
     bool isInvalidRadius(int x, int y);
     bool isThereActor(int x, int y);
     bool isThereBoulder(int x, int y);
     bool isThereFrackMan(int x, int y);
+    bool isNearFrackMan(Actor* a, int radius);
+    bool facingTowardFrackMan(Actor* a) const;
+    bool canActorMoveTo(Actor* a, int x, int y) const;
+    
+    
     int numObjects(int IID);
+    int numBarrels(){return m_numBarrels;}
+    
+    
     void clearDead();
     void gotBarrel(){m_numBarrels--;}
-    int numBarrels(){return m_numBarrels;}
+    void revealObjects();
+    
     
     Actor* getActor(int x, int y);
     FrackMan* getPlayer(){return m_player;}
@@ -98,6 +113,7 @@ private:
     Dirt* m_dirt[64][64];
     FrackMan* m_player;
     int m_numBarrels;
+    int m_ticks;
 };
 
 #endif // STUDENTWORLD_H_
