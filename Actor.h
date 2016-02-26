@@ -5,6 +5,7 @@
 #define ACTOR_H_
 
 #include "GraphObject.h"
+#include <list>
 
 class StudentWorld;
 
@@ -28,7 +29,7 @@ public:
     void setDead() {m_isAlive = false;}
     
     // Annoy this actor.
-    virtual bool annoy(unsigned int amt){return 0;}
+    virtual bool annoy(unsigned int amt) = 0;
     
     // Get this actor's world
     StudentWorld* getWorld() const{return m_world;}
@@ -56,6 +57,7 @@ public:
 private:
     bool m_isAlive;
     StudentWorld* m_world;
+    
 };
 
 
@@ -66,19 +68,23 @@ class Agent : public Actor
 {
 public:
     Agent(StudentWorld* world, int startX, int startY, Direction startDir,
-          int imageID, double size, int depth, unsigned int hitPoints)
-    :Actor(world, startX, startY, startDir, true, imageID, size, depth), m_hitPoints(hitPoints){}
+          int imageID, double size, int depth, unsigned int hitPoints);
     
-    // Pick up a gold nugget.
+    
     virtual void addGold() = 0;
-    
-    // How many hit points does this actor have left?
-    unsigned int getHitPoints() const{return m_hitPoints;}
-    
-    virtual bool annoy(unsigned int amount){return true;}
+    virtual void go(Direction dir) = 0;
+    virtual bool annoy(unsigned int amt);
     virtual bool canPickThingsUp() const{return true;}
+    
+    
+    
+    void getHurt(){m_hitPoints--;}
+    void checkHealth(){ if(m_hitPoints <= 0) setDead();}
+    int getHitPoints() const{return m_hitPoints;}
+    
 private:
     int m_hitPoints;
+    char thisMap[66][66];
 };
 
 
@@ -90,17 +96,16 @@ class FrackMan : public Agent
 public:
     FrackMan(StudentWorld* world);
     virtual void move();
-    virtual bool annoy(unsigned int amount){return true;}
     virtual bool canDigThroughDirt() const{return true;}
     
     
     // Pick up a sonar kit.
     void addSonar();
-    void decreaseSonar(){m_numSonar--;}
+    void decreaseSonar();
     void addGold();
     // Pick up water.
     void addWater();
-    
+    void checkEnemies();
     // Get amount of gold
     unsigned int getGold() const{return m_numNuggets;}
     
@@ -122,6 +127,13 @@ private:
 };
 
 
+
+
+
+
+
+
+
 ////////////////////////////////////////////////////////////////////////////////
 // Protestor Interface
 ////////////////////////////////////////////////////////////////////////////////
@@ -130,22 +142,79 @@ class Protester : public Agent
 public:
     Protester(StudentWorld* world, int startX, int startY, int imageID,
               unsigned int hitPoints, unsigned int score);
-    virtual void move(){return;}
-    virtual bool annoy(unsigned int amount){return true;}
+    
+    virtual void move();
     virtual void addGold(){return;}
     virtual bool huntsFrackMan() const{return true;}
     
     // Set state to having gien up protest
-    void setMustLeaveOilField(){return;}
+
+    bool shouldProtestorLeave(){return shouldILeave;}
+    bool isValidMove(Direction dir);
+    bool madeHorizontalMove(Direction startDir, Direction newDir);
+    bool amIAtAnIntersection(int currX, int currY);
     
     // Set number of ticks until next move
+    
+    int getSquaresToMove(){return m_numSquaresToMove;}
+    int ticksToWait();
+    int findPath(int x, int y);
+
+    
+    void moveRandomly();
+    void go(Direction dir);
+    
+    
+    
+    
+    void decreaseSquaresToMove(){m_numSquaresToMove--;}
+    void checkBullets();
     void setTicksToNextMove(){return;}
-    void setSquaresToMove(){m_numSquaresToMoveInCurrentDirection = 8;}
-    int getSquaresToMove(){return m_numSquaresToMoveInCurrentDirection;}
-    void decreaseSquaresToMove(){m_numSquaresToMoveInCurrentDirection--;}
+    void setSquaresToMove(){m_numSquaresToMove = 8;}
+    void setMustLeaveOilField(){shouldILeave = true;}
+    void findExit();
+    void printMap();
+    void setMap();
+    void findExit2();
+    void huntFrackMan();
+    void makePerpindicularMove();
+    
+    
+    
+    void changeDirectionsIfPossible();
+    
+private:
+    
+    class Coord
+    {
+    public:
+        Coord(int rr, int cc): m_r(rr), m_c(cc){}
+        int r() const{return m_r;}
+        int c() const{return m_c;}
+        
     private:
-    int m_numSquaresToMoveInCurrentDirection;
+        int m_r;
+        int m_c;
+    };
+    
+    
+    bool shouldILeave;
+    bool foundFrackMan;
+    bool dirtMap[64][64];
+    
+    int m_numSquaresToMove;
+    int m_ticksPassed;
+    int m_ticksSinceHorizontalMove;
+    
+    char thisMap[64][64];
+    
+    std::list<Direction> wayOut;
+    
 };
+
+
+
+
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -155,7 +224,6 @@ class RegularProtester : public Protester
 {
 public:
     RegularProtester(StudentWorld* world, int startX, int startY);
-    virtual void move();
     virtual void addGold(){return;}
 };
 
@@ -167,7 +235,6 @@ class HardcoreProtester : public Protester
 {
 public:
     HardcoreProtester(StudentWorld* world, int startX, int startY);
-    virtual void move(){return;}
     virtual void addGold(){return;}
 };
 
@@ -179,6 +246,7 @@ class Dirt : public Actor
 {
 public:
     Dirt(StudentWorld* world, int startX, int startY);
+    virtual bool annoy(unsigned int amt){return false;}
     virtual void move(){return;}
 };
 
@@ -191,6 +259,7 @@ class Boulder : public Actor
 public:
     Boulder(StudentWorld* world, int startX, int startY) ;
     virtual void move();
+    virtual bool annoy(unsigned int amt){return false;}
     virtual bool canActorsPassThroughMe() const{return false;}
 private:
     int m_count;
@@ -206,11 +275,14 @@ class Squirt : public Actor
 public:
     Squirt(StudentWorld* world, int startX, int startY, Direction startDir);
     virtual void move();
-    virtual bool canIBePickedUp(){return true;}
+    virtual bool canIBePickedUp(){return false;}
+    virtual bool annoy(unsigned int amt){return false;}
+    bool isThereProtestor();
     int getTravelDistance(){return m_travelDistance;}
     void decreaseTravelDistance(){m_travelDistance--;}
 private:
     int m_travelDistance;
+    bool annoyedSomeone;
 };
 
 
@@ -224,6 +296,7 @@ public:
                      int soundToPlay, bool activateOnPlayer,
                      bool activateOnProtester, bool initallyActive, Direction dir, bool visible);
     virtual void move();
+    virtual bool annoy(unsigned int amt){return false;}
     virtual void setTicksToLive();
     int getTicksToLive(){return m_ticksToLive;}
     void decreaseTicksToLive(){m_ticksToLive--;}
@@ -255,6 +328,7 @@ public:
     virtual void move();
     void setDropped(){dropped = true;}
     bool didDrop(){return dropped;}
+    
 private:
     bool dropped;
     
@@ -268,7 +342,7 @@ class SonarKit : public ActivatingObject
 {
 public:
     SonarKit(StudentWorld* world, int startX, int startY);
-//    virtual void move();
+    virtual void move(){return;}
 };
 
 
@@ -286,6 +360,7 @@ public:
 
 
 #endif // ACTOR_H_
+
 
 
 
