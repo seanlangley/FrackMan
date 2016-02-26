@@ -18,26 +18,19 @@ StudentWorld::~StudentWorld()
 {
     cleanUp();
 }
-bool StudentWorld::canActorMoveTo(Actor* a, int x, int y) const
-{
-    if(isThereDirt(x,y))
-        return false;
-    return true;
-}
-
-void StudentWorld::addDirt()
-{
-    for(int x = 0; x < 64; x++)
-        for(int y = 0; y < 4; y++)
-            m_dirt[x][y] = new Dirt(this, x,y);
-    
-    for(int x = 0; x < 64; x++)
-        for(int y = 4; y < 60; y++)
-            if(x < 30 || x > 33)
-                m_dirt[x][y] = new Dirt(this, x,y);
-}
 
 
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Game Accessing Functions
+////////////////////////////////////////////////////////////////////////////////
 bool StudentWorld::isThereDirt(int x, int y) const 
 {
     for(int i = 0; i < 4; i++)
@@ -47,111 +40,21 @@ bool StudentWorld::isThereDirt(int x, int y) const
     return false;
 }
 
-
-
-void StudentWorld::clearDirt(int x, int y)
+bool StudentWorld::isThereDirtExact(int x, int y) const
 {
-    if(isThereDirt(x,y))                                //If there's dirt at the player's location, delete the dirt
-    {
-        playSound(SOUND_DIG);
-        for(int i = 0;  i < 4; i++)
-            for(int k = 0; k < 4; k++)
-            {
-                if(m_dirt[x+i][y+k] != nullptr)
-                {
-                    m_dirt[x+i][y+k]->setVisible(false);     //FIND OUT HOW TO USE POLYMORPHISM deleteActor HERE
-                    delete m_dirt[x+i][y+k];
-                    m_dirt[x+i][y+k] = nullptr;
-                }
-            }
-        
-        
-    }
+    if(m_dirt[x][y] != nullptr)
+        return true;
+    return false;
 }
 
-int StudentWorld::numObjects(int IID)
+
+bool StudentWorld::canActorMoveTo(Actor* a, int x, int y) const
 {
-    switch(IID)
-    {
-        case IID_BOULDER:
-            if(getLevel()/2 + 2 < 6)
-                return getLevel()/2 +2;
-            else return 6;
-            break;
-        case IID_BARREL:
-            if(getLevel()+2 < 20)
-                return getLevel()+2;
-            else return 20;
-            break;
-        case IID_GOLD:
-            if(5 - getLevel()/2 < 2)
-                return 5 - getLevel()/2;
-            else return 2;
-            break;
-        case IID_PROTESTER:
-            if(2 + getLevel()*1.5 < 15)
-                return 2 + getLevel()*1.5;
-            else return 15;
-        default:
-            return 0; break;
-            
-    }
+    if(isThereDirt(x,y))
+        return false;
+    return true;
 }
 
-////////Add Boulders to the field
-void StudentWorld::addBoulders()
-{
-    for(int k = 0; k < numObjects(IID_BOULDER); k++)
-    {
-        int x = rand() % 56; int y = rand() % 56;
-        while(y < 20)
-            y = rand() % 56;
-        while(x < 4 || (x > 22 && x < 33))
-            x = rand() % 56;
-        
-        
-        if(isThereDirt(x,y) || isThereDirt(x+4, y+4))
-        {
-            m_actors.push_back(new Boulder(this, x,y));
-            for(int i = 0;  i < 4; i++)
-                for(int k = 0; k < 4; k++)
-                {
-                    if(m_dirt[x+i][y+k] != nullptr)
-                    {
-                        m_dirt[x+i][y+k]->setVisible(false);     //FIND OUT HOW TO USE POLYMORPHISM deleteActor HERE
-                        delete m_dirt[x+i][y+k];
-                        m_dirt[x+i][y+k] = nullptr;
-                    }
-                }
-        }
-        else
-            k--;
-    }
-}
-
-void StudentWorld::clearDead()
-{
-    for(vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end();)
-        if(*it != nullptr)
-        {
-            if((*it)->isAlive() == false)
-            {
-                
-                {
-                    delete *it;
-                    *it = nullptr;
-                    it = m_actors.erase(it);
-                }
-                
-                
-            }
-            else it++;
-        }
-    
-    
-    
-    
-}
 
 bool StudentWorld::isThereBoulder(int x, int y)
 {
@@ -171,6 +74,7 @@ bool StudentWorld::isThereBoulder(int x, int y)
     }
     return false;
 }
+
 
 bool StudentWorld::isThereFrackMan(int x, int y)
 {
@@ -196,94 +100,6 @@ bool StudentWorld::isThereActor(int x, int y)
     }
     return false;
     
-}
-
-Actor* StudentWorld::getActor(int x, int y)
-{
-    for(vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); it++)
-    {
-        int x1 = (**it).getX();
-        int y1 = (**it).getY();
-        
-        for(int i = 0; i < 4; i++)
-            for(int k = 0; k < 4; k++)
-                if(x == x1 + i && y == y1 + k)
-                    return *it;
-        
-    }
-    
-    return nullptr;
-}
-
-bool StudentWorld::isNearFrackMan(Actor *a, int radius)
-{
-    for(int i = 0; i < radius; i++)
-        for(int k = 0; k < radius; k++)
-        {
-            if(a->getX() + i == m_player->getX() + k && a->getY() + i == m_player->getY() + k)
-                return true;
-            if(a->getX() - i == m_player->getX() - k && a->getY() - i == m_player->getY() - k)
-                return true;
-        }
-    return false;
-    
-        
-       
-}
-////////Checks the Euclidian Radius of
-bool StudentWorld::isInvalidRadius(int x, int y) 
-{
-    for(int i = 0; i < 8; i++)
-        for(int k = 0; k < 8; k++)
-            if(isThereActor(x+i, y+k) || isThereActor(x+4-i, y+4-k))
-                return true;
-    return false;
-}
-
-void StudentWorld::addActor(Actor *a)
-{
-    
-    m_actors.push_back(a);
-}
-
-void StudentWorld::addOil()
-{
-    for(int k = 0; k < numObjects(IID_BARREL); k++)
-    {
-        int x = rand() % 56; int y = rand() % 56;
-        
-        while(isInvalidRadius(x,y))
-        {
-            x = rand() % 56, y = rand() % 56;
-        }
-        
-        if(isThereDirt(x,y) || isThereDirt(x+4, y+4))
-        {
-            
-            m_actors.push_back(new OilBarrel(this, x,y));
-        }
-        else --k;
-    }
-}
-
-void StudentWorld::addGold()
-{
-    for(int k = 0; k < numObjects(IID_GOLD); k++)
-    {
-        int x = rand() % 56; int y = rand() % 56;
-        
-        while(isInvalidRadius(x,y))
-        {
-            x = rand() % 56, y = rand() % 56;
-        }
-        
-        if(isThereDirt(x,y) || isThereDirt(x+4, y+4))
-        {
-            
-            m_actors.push_back(new GoldNugget(this, x,y, false));
-        }
-        else --k;
-    }
 }
 
 bool StudentWorld::facingTowardFrackMan(Actor *a) const
@@ -342,11 +158,249 @@ bool StudentWorld::facingTowardFrackMan(Actor *a) const
 }
 
 
+////////Checks the Euclidian Radius of
+bool StudentWorld::isInvalidRadius(int x, int y)
+{
+    for(int i = 0; i < 8; i++)
+        for(int k = 0; k < 8; k++)
+            if(isThereActor(x+i, y+k) || isThereActor(x+4-i, y+4-k))
+                return true;
+    return false;
+}
+
+void StudentWorld::addActor(Actor *a)
+{
+    
+    m_actors.push_back(a);
+}
+////////////////////////////////////////////////////////////////////////////////
+// End of Game Accessing Functions
+////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Game Managing Functions
+////////////////////////////////////////////////////////////////////////////////
+void StudentWorld::clearDirt(int x, int y)
+{
+    if(isThereDirt(x,y))                                //If there's dirt at the player's location, delete the dirt
+    {
+        playSound(SOUND_DIG);
+        for(int i = 0;  i < 4; i++)
+            for(int k = 0; k < 4; k++)
+            {
+                if(m_dirt[x+i][y+k] != nullptr)
+                {
+                    m_dirt[x+i][y+k]->setVisible(false);     //FIND OUT HOW TO USE POLYMORPHISM deleteActor HERE
+                    delete m_dirt[x+i][y+k];
+                    m_dirt[x+i][y+k] = nullptr;
+                }
+            }
+        
+        
+    }
+}
+
+int StudentWorld::numObjects(int IID)
+{
+    switch(IID)
+    {
+        case IID_BOULDER:
+            if(getLevel()/2 + 2 < 6)
+                return getLevel()/2 +2;
+            else return 6;
+            break;
+        case IID_BARREL:
+            if(getLevel()+2 < 20)
+                return getLevel()+2;
+            else return 20;
+            break;
+        case IID_GOLD:
+            if(5 - getLevel()/2 > 2)
+                return 5 - getLevel()/2;
+            else return 2;
+            break;
+        case IID_PROTESTER:
+            if(2 + getLevel()*1.5 < 15)
+                return 2 + getLevel()*1.5;
+            else return 15;
+        default:
+            return 0; break;
+            
+    }
+}
+
+
+
+void StudentWorld::clearDead()
+{
+    for(vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end();)
+        if(*it != nullptr)
+        {
+            if((*it)->isAlive() == false)
+            {
+                
+                {
+                    delete *it;
+                    *it = nullptr;
+                    it = m_actors.erase(it);
+                }
+                
+                
+            }
+            else it++;
+        }
+    
+}
+
+
+
+
+Actor* StudentWorld::getActor(int x, int y)
+{
+    for(vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); it++)
+    {
+        int x1 = (**it).getX();
+        int y1 = (**it).getY();
+        
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < 4; k++)
+                if(x == x1 + i && y == y1 + k)
+                    return *it;
+        
+    }
+    
+    return nullptr;
+}
+
 
 void StudentWorld::revealObjects()
-{}
+{
+    for(vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); it++)
+    {
+        if(isNearFrackMan(*it, 12))
+            (**it).setVisible(true);
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// End of Game Managing Functions
+////////////////////////////////////////////////////////////////////////////////
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Actor Managing Functions
+////////////////////////////////////////////////////////////////////////////////
+void StudentWorld::addGold()
+{
+    for(int k = 0; k < numObjects(IID_GOLD); k++)
+    {
+        int x = rand() % 56; int y = rand() % 56;
+        
+        while(isNearActor(x,y, 5))
+        {
+            x = rand() % 56, y = rand() % 56;
+        }
+        
+        if(isThereDirt(x,y) || isThereDirt(x+4, y+4))
+        {
+            
+            m_actors.push_back(new GoldNugget(this, x,y, false));
+        }
+        else --k;
+    }
+}
+
+void StudentWorld::addDirt()
+{
+    for(int x = 0; x < 64; x++)
+        for(int y = 0; y < 4; y++)
+            m_dirt[x][y] = new Dirt(this, x,y);
+    
+    for(int x = 0; x < 64; x++)
+        for(int y = 4; y < 60; y++)
+            if(x < 30 || x > 33)
+                m_dirt[x][y] = new Dirt(this, x,y);
+}
+
+
+////////Add Boulders to the field
+void StudentWorld::addBoulders()
+{
+    for(int k = 0; k < numObjects(IID_BOULDER); k++)
+    {
+        int x = rand() % 56; int y = rand() % 56;
+        while(y < 20)
+            y = rand() % 56;
+        while(x < 4 || (x > 22 && x < 33))
+            x = rand() % 56;
+        
+        while(isNearActor(x,y, 8))
+        {
+            x = rand() % 56, y = rand() % 56;
+            while(y < 20)
+                y = rand() % 56;
+            while(x < 4 || (x > 22 && x < 33))
+                x = rand() % 56;
+        }
+        
+        if(isThereDirt(x,y) || isThereDirt(x+4, y+4))
+        {
+            m_actors.push_back(new Boulder(this, x,y));
+            clearDirt(x,y);
+        }
+        else
+            k--;
+    }
+}
+
+void StudentWorld::addOil()
+{
+    for(int k = 0; k < numObjects(IID_BARREL); k++)
+    {
+        int x = rand() % 56; int y = rand() % 56;
+        
+        while(isNearActor(x,y, 8))
+        {
+            x = rand() % 56, y = rand() % 56;
+        }
+        
+        if(isThereDirt(x,y) || isThereDirt(x+4, y+4))
+        {
+            
+            m_actors.push_back(new OilBarrel(this, x,y));
+        }
+        else --k;
+    }
+}
 
 void StudentWorld::addNewActors()
 {
@@ -362,7 +416,9 @@ void StudentWorld::addNewActors()
         if(probInt2 < 5)
         {
             int x = rand() % 60; int y = rand() % 60;
-            while(isThereDirt(x,y))
+            
+            
+            while(isThereDirt(x,y) || isThereBoulder(x,y))
             {
                 x = rand() % 64; y = rand() % 60;
             }
@@ -399,10 +455,11 @@ void StudentWorld::addNewProtestors()
     if(count == 0)
     {
         if(regProt)
-            m_actors.push_back(new RegularProtester(this, 60,60));
+            m_actors.push_back(new RegularProtester(this, 0,60));
         else
-            m_actors.push_back(new HardcoreProtester(this, 60,60));
+            m_actors.push_back(new HardcoreProtester(this, 0,60));
     }
+    
     if(count >= numObjects(IID_PROTESTER))
         return;
     
@@ -413,7 +470,6 @@ void StudentWorld::addNewProtestors()
     
     if(m_ticks < maxTicks)
     {
-        cout << m_ticks << endl;
         m_ticks++;
         return;
     }
@@ -421,13 +477,259 @@ void StudentWorld::addNewProtestors()
     else
     {
         if(regProt)
-            m_actors.push_back(new RegularProtester(this, 60,60));
+            m_actors.push_back(new RegularProtester(this, 0,60));
         else
-            m_actors.push_back(new HardcoreProtester(this, 60,60));
+            m_actors.push_back(new HardcoreProtester(this, 0,60));
         m_ticks = 0;
     }
     
 }
+////////////////////////////////////////////////////////////////////////////////
+// End of Actor Managing Functions
+////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Radius Checking Functions
+////////////////////////////////////////////////////////////////////////////////
+bool StudentWorld::isNearFrackMan(Actor *a, int radius)
+{
+    int x = a->getX();
+    int y = a->getY();
+    
+    int temp = radius;
+    ////check left
+    for(int i = 0; i < 4; i++)
+        for(int k = 0; k < temp; k++)
+            if(m_player->getX() - radius + k == x && m_player->getY()-i == y)
+                return true;
+    ////check down
+    for(int i = 0; i < 4; i++)
+        for(int k = 0; k < temp; k++)
+            if(m_player->getX() + i == x && m_player->getY() - radius + k == y)
+                return true;
+    ////check up
+    for(int i = 0; i < 4; i++)
+        for(int k = 0; k < temp; k++)
+            if(m_player->getX() + i == x && m_player->getY() + radius + 4 - k == y)
+                return true;
+    ////check right
+    for(int i = 0; i < 4; i++)
+        for(int k = 0; k < temp; k++)
+            if(m_player->getX() + radius + 4 - k == x && m_player->getY() + i == y)
+                return true;
+    ////up left diagonal
+    for(int i = 0; i < 4; i++)
+        for(int k = 0; k < temp; k++)
+            if(m_player->getX() - radius +  k == x && m_player->getY() + radius + 4 - i == y)
+                return true;
+    ////up right diagonal
+    for(int i = 0; i < 4; i++)
+        for(int k = 0; k < temp; k++)
+            if(m_player->getX() + radius + 4 - k == x && m_player->getY() + radius + 4 - i == y)
+                return true;
+    ////down right diagonal
+    for(int i = 0; i < 4; i++)
+        for(int k = 0; k < temp; k++)
+            if(m_player->getX() + radius + 4 - k == x && m_player->getY() - radius + i == y)
+                return true;
+    ////down left diagonal
+    for(int i = 0; i < 4; i++)
+        for(int k = 0; k < temp; k++)
+            if(m_player->getX() - radius + k == x && m_player->getY() - radius + i == y)
+                return true;
+    return false;
+    
+    
+    
+}
+
+bool StudentWorld::isNearActor(int x, int y, int radius)
+{
+    
+    for(vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); it++)
+    {
+        
+        int temp = radius;
+        ////check left
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < temp; k++)
+                if((*it)->getX() - radius + k == x && (*it)->getY()-i == y)
+                    return true;
+        ////check down
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < temp; k++)
+                if((*it)->getX() + i == x && (*it)->getY() - radius + k == y)
+                    return true;
+        ////check up
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < temp; k++)
+                if((*it)->getX() + i == x && (*it)->getY() + radius + 4 - k == y)
+                    return true;
+        ////check right
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < temp; k++)
+                if((*it)->getX() + radius + 4 - k == x && (*it)->getY() + i == y)
+                    return true;
+        ////up left diagonal
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < temp; k++)
+                if((*it)->getX() - radius +  k == x && (*it)->getY() + radius + 4 - i == y)
+                    return true;
+        ////up right diagonal
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < temp; k++)
+                if((*it)->getX() + radius + 4 - k == x && (*it)->getY() + radius + 4 - i == y)
+                    return true;
+        ////down right diagonal
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < temp; k++)
+                if((*it)->getX() + radius + 4 - k == x && (*it)->getY() - radius + i == y)
+                    return true;
+        ////down left diagonal
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < temp; k++)
+                if((*it)->getX() - radius + k == x && (*it)->getY() - radius + i == y)
+                    return true;
+    }
+    
+    return false;
+}
+
+bool StudentWorld::isNearActor(Actor* a, int radius)
+{
+    int x = a->getX();
+    int y = a->getY();
+    
+    for(vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); it++)
+    {
+        
+        int temp = radius;
+        ////check left
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < temp; k++)
+                if((*it)->getX() - radius + k == x && (*it)->getY()-i == y)
+                    return true;
+        ////check down
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < temp; k++)
+                if((*it)->getX() + i == x && (*it)->getY() - radius + k == y)
+                    return true;
+        ////check up
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < temp; k++)
+                if((*it)->getX() + i == x && (*it)->getY() + radius + 4 - k == y)
+                    return true;
+        ////check right
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < temp; k++)
+                if((*it)->getX() + radius + 4 - k == x && (*it)->getY() + i == y)
+                    return true;
+        ////up left diagonal
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < temp; k++)
+                if((*it)->getX() - radius +  k == x && (*it)->getY() + radius + 4 - i == y)
+                    return true;
+        ////up right diagonal
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < temp; k++)
+                if((*it)->getX() + radius + 4 - k == x && (*it)->getY() + radius + 4 - i == y)
+                    return true;
+        ////down right diagonal
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < temp; k++)
+                if((*it)->getX() + radius + 4 - k == x && (*it)->getY() - radius + i == y)
+                    return true;
+        ////down left diagonal
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < temp; k++)
+                if((*it)->getX() - radius + k == x && (*it)->getY() - radius + i == y)
+                    return true;
+    }
+    
+    return false;
+}
+
+bool StudentWorld::isNearProtester(int x, int y, int radius)
+{
+    for(vector<Actor*>::iterator it = m_actors.begin(); it != m_actors.end(); it++)
+    {
+        if((**it).getID() != IID_PROTESTER || (**it).getID() != IID_HARD_CORE_PROTESTER)
+            continue;
+        
+        int temp = radius;
+        ////check left
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < temp; k++)
+                if((*it)->getX() - radius + k == x && (*it)->getY()-i == y)
+                    return true;
+        ////check down
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < temp; k++)
+                if((*it)->getX() + i == x && (*it)->getY() - radius + k == y)
+                    return true;
+        ////check up
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < temp; k++)
+                if((*it)->getX() + i == x && (*it)->getY() + radius + 4 - k == y)
+                    return true;
+        ////check right
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < temp; k++)
+                if((*it)->getX() + radius + 4 - k == x && (*it)->getY() + i == y)
+                    return true;
+        ////up left diagonal
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < temp; k++)
+                if((*it)->getX() - radius +  k == x && (*it)->getY() + radius + 4 - i == y)
+                    return true;
+        ////up right diagonal
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < temp; k++)
+                if((*it)->getX() + radius + 4 - k == x && (*it)->getY() + radius + 4 - i == y)
+                    return true;
+        ////down right diagonal
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < temp; k++)
+                if((*it)->getX() + radius + 4 - k == x && (*it)->getY() - radius + i == y)
+                    return true;
+        ////down left diagonal
+        for(int i = 0; i < 4; i++)
+            for(int k = 0; k < temp; k++)
+                if((*it)->getX() - radius + k == x && (*it)->getY() - radius + i == y)
+                    return true;
+    }
+    
+    return false;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// End of Radius Checking Functions
+////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // String Managing Functions
@@ -457,10 +759,27 @@ void StudentWorld::setGameString(string &s)
     oss.setf(ios::fixed);
     oss.precision(2);
     
-    oss << "Scr: " << j << " Lvl: " << getLevel()+1 << "  Lives: " << getLives() << "  Hlth: " << getPlayer()->getHitPoints() <<
-    "%  Water: " << getPlayer()->getWater() << "  Gld: " << getPlayer()->getGold() << "  Sonar: " << getPlayer()->getSonar() << "  Oil Left: " << m_numBarrels;
+    oss << "Scr: " << j << " Lvl: " << getLevel()+1 << "  Lives: " << getLives() << "  Hlth: " << 10 * getPlayer()->getHitPoints() <<
+    "%  Water: " << getPlayer()->getWater() << "  Gld: " << getPlayer()->getGold() << "  Sonar: "
+    << getPlayer()->getSonar() << "  Oil Left: " << m_numBarrels;
     s = oss.str();
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// End of String Managing Functions
+////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Main Functions
@@ -474,7 +793,6 @@ int StudentWorld::init()
     addBoulders();
     addOil();
     addGold();
-    
     m_player = new FrackMan(this);
     return GWSTATUS_CONTINUE_GAME;
 }
@@ -487,6 +805,7 @@ int StudentWorld::move()
     
     addNewActors();
     addNewProtestors();
+    
     
     if(m_player->isAlive())
     {
@@ -503,6 +822,7 @@ int StudentWorld::move()
     
     else
     {
+        playSound(SOUND_PLAYER_GIVE_UP);
         decLives();
         return GWSTATUS_PLAYER_DIED;
     }
@@ -511,6 +831,7 @@ int StudentWorld::move()
         return GWSTATUS_CONTINUE_GAME;
     else if(m_numBarrels == 0)
         return GWSTATUS_FINISHED_LEVEL;
+    
 
     
     
@@ -540,7 +861,9 @@ void StudentWorld::cleanUp()
 
 
 
-
+////////////////////////////////////////////////////////////////////////////////
+// End of Main Functions
+////////////////////////////////////////////////////////////////////////////////
 
 
 
