@@ -86,6 +86,7 @@ public:
     string setScoreString(int score);
     
     bool isThereDirt(int x, int y) const;
+    bool isThereDirtExact(int x, int y) const;
     bool isInvalidRadius(int x, int y);
     bool isThereActor(int x, int y);
     bool isThereBoulder(int x, int y);
@@ -93,6 +94,10 @@ public:
     bool isNearFrackMan(Actor* a, int radius);
     bool facingTowardFrackMan(Actor* a) const;
     bool canActorMoveTo(Actor* a, int x, int y) const;
+    bool isNearActor(Actor* a, int radius);
+    bool isNearActor(int x, int y, int radius);
+    bool isNearProtester(int x, int y, int radius);
+    
     
     
     int numObjects(int IID);
@@ -106,6 +111,8 @@ public:
     
     Actor* getActor(int x, int y);
     FrackMan* getPlayer(){return m_player;}
+    
+    
     
 private:
     
