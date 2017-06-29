@@ -87,7 +87,6 @@ public:
     
     bool isThereDirt(int x, int y) const;
     bool isThereDirtExact(int x, int y) const;
-    bool isInvalidRadius(int x, int y);
     bool isThereActor(int x, int y);
     bool isThereBoulder(int x, int y);
     bool isThereFrackMan(int x, int y);
