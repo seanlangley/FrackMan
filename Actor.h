@@ -21,6 +21,7 @@ public:
     
     // Action to perform each tick.
     virtual void move() = 0;
+    virtual void setAnnoyed(){return;}
     
     // Is this actor alive?
     bool isAlive() const {if(m_isAlive) return true; else return false;}
@@ -53,6 +54,7 @@ public:
     // return false without moving.
     bool moveToIfPossible(int x, int y){return true;}
     virtual bool canIBePickedUp(){return false;}
+    virtual void addGold(){return;}
     
 private:
     bool m_isAlive;
@@ -71,18 +73,21 @@ public:
           int imageID, double size, int depth, unsigned int hitPoints);
     
     
-    virtual void addGold() = 0;
+    virtual void addGold();
+    
+    
     virtual void go(Direction dir) = 0;
     virtual bool annoy(unsigned int amt);
     virtual bool canPickThingsUp() const{return true;}
-    
-    
+    virtual void setAnnoyed(){return;}
+    virtual unsigned int getGold() const{return m_numNuggets;}
     
     void getHurt(){m_hitPoints--;}
     void checkHealth(){ if(m_hitPoints <= 0) setDead();}
     int getHitPoints() const{return m_hitPoints;}
     
 private:
+    int m_numNuggets;
     int m_hitPoints;
     char thisMap[66][66];
 };
@@ -107,11 +112,11 @@ public:
     void addWater();
     void checkEnemies();
     // Get amount of gold
-    unsigned int getGold() const{return m_numNuggets;}
+    
     
     // Get amount of sonar charges
     unsigned int getSonar() const{return m_numSonar;}
-    
+    virtual unsigned int getGold() const{return m_numNuggets;}
     // Get amount of water
     unsigned int getWater() const{return m_numWater;}
     void dropGold(Direction dir);
@@ -119,11 +124,14 @@ public:
     void shootGun();
     void decreaseAmmo(){m_numWater--;}
     void go(Direction dir);
+    int getSafeTicks();
 private:
     int m_score;
     int m_numNuggets;
     int m_numSonar;
     int m_numWater;
+    int m_ticksPassed;
+    bool gotHit;
 };
 
 
@@ -144,7 +152,7 @@ public:
               unsigned int hitPoints, unsigned int score);
     
     virtual void move();
-    virtual void addGold(){return;}
+    virtual void addGold();
     virtual bool huntsFrackMan() const{return true;}
     
     // Set state to having gien up protest
@@ -159,10 +167,12 @@ public:
     int getSquaresToMove(){return m_numSquaresToMove;}
     int ticksToWait();
     int findPath(int x, int y);
+    int restingTicks();
 
     
     void moveRandomly();
     void go(Direction dir);
+    void getGold();
     
     
     
@@ -178,8 +188,8 @@ public:
     void findExit2();
     void huntFrackMan();
     void makePerpindicularMove();
-    
-    
+    void setAnnoyed(){gotHit = true;}
+    void checkFrackMan();
     
     void changeDirectionsIfPossible();
     
@@ -200,11 +210,13 @@ private:
     
     bool shouldILeave;
     bool foundFrackMan;
+    bool gotHit;
     bool dirtMap[64][64];
     
     int m_numSquaresToMove;
     int m_ticksPassed;
     int m_ticksSinceHorizontalMove;
+    int m_ticksWhileStunned;
     
     char thisMap[64][64];
     
