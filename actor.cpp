@@ -44,10 +44,16 @@ Agent::Agent(StudentWorld* world, int startX, int startY, Direction startDir, in
 }
 
 
+void Agent::addGold()
+{
+
+    m_numNuggets++; getWorld()->increaseScore(10);
+
+}
+
 bool Agent::annoy(unsigned int amt)
 {
     m_hitPoints -= amt;
-    cout << m_hitPoints << endl;
     return true;
 }
 
@@ -128,7 +134,7 @@ void ActivatingObject::setTicksToLive()
 ////////////////////////////////////////////////////////////////////////////////
 
 FrackMan::FrackMan(StudentWorld* world)
-:Agent(world, 30, 60, right, IID_PLAYER, 1.0, 0, 10), m_score(0), m_numNuggets(0), m_numWater(100), m_numSonar(100)
+:Agent(world, 30, 60, right, IID_PLAYER, 1.0, 0, 10), m_score(0), m_numNuggets(0), m_numWater(100), m_numSonar(1), gotHit(false), m_ticksPassed(0)
 {}
 
 void FrackMan::addSonar()
@@ -152,17 +158,37 @@ void FrackMan::decreaseSonar()
     getWorld()->playSound(SOUND_SONAR);
 }
 
+int FrackMan::getSafeTicks()
+{
+    if(100 - getWorld()->getLevel() * 10 < 50)
+        return 100 - getWorld()->getLevel() * 10;
+    else return 50;
+}
+
 void FrackMan::checkEnemies()
 {
     if(getWorld()->isNearProtester(getX(), getY(), 3))
+    {
+        gotHit = true;
         getHurt();
+    }
 }
 
 void FrackMan::move()
 {
-    checkEnemies();
     checkHealth();
     getGoodie();
+    if(gotHit == false)
+        checkEnemies();
+    else if(gotHit == true)
+    {
+        m_ticksPassed++;
+        if(m_ticksPassed >= getSafeTicks())
+        {
+            m_ticksPassed = 0;
+            gotHit = false;
+        }
+    }
     
     int ch;
     if(getWorld()->getKey(ch) == true)
@@ -188,7 +214,6 @@ void FrackMan::move()
     if(temp != nullptr && temp->getID() == IID_PROTESTER && getWorld()->isNearFrackMan(temp, 3))
     {
         getWorld()->playSound(SOUND_PLAYER_ANNOYED);
-        cout << getHitPoints() << endl;
         annoy(3);
     }
     
@@ -387,6 +412,7 @@ void Squirt::move()
         if(annoyedSomeone == false)
         {
             getWorld()->playSound(SOUND_PROTESTER_ANNOYED);
+            temp->setAnnoyed();
             temp->annoy(2);
         }
         annoyedSomeone = true;
@@ -582,6 +608,15 @@ void GoldNugget::move()
         getWorld()->getPlayer()->addGold();
         setDead();
     }
+    
+    Actor* temp = getWorld()->getActor(getX(), getY());
+    if(temp != nullptr && temp->getID() == IID_PROTESTER)
+    {
+        getWorld()->playSound(SOUND_PROTESTER_FOUND_GOLD);
+        getWorld()->increaseScore(25);
+        setDead();
+    }
+    
 }
 
 
@@ -630,10 +665,18 @@ SonarKit::SonarKit(StudentWorld* world, int startX, int startY)
 ////////////////////////////////////////////////////////////////////////////////
 Protester::Protester(StudentWorld* world, int startX, int startY, int imageID, unsigned int hitPoints, unsigned int score)
 :Agent(world, startX, startY, left, imageID, 1.0, 0, 5), m_numSquaresToMove(8), shouldILeave(false), m_ticksPassed(0), foundFrackMan(false),
-     m_ticksSinceHorizontalMove(0)
+     m_ticksSinceHorizontalMove(0), m_ticksWhileStunned(0), gotHit(false)
 {
     setMap();
 }
+
+void Protester::addGold()
+{
+    getWorld()->playSound(SOUND_PROTESTER_FOUND_GOLD);
+    getWorld()->increaseScore(25);
+    shouldILeave = true;
+}
+
 
 void Protester::setMap()
 {
@@ -672,8 +715,18 @@ void Protester::checkBullets()
 {
     int x = getX(), y = getY();
     Actor* temp = getWorld()->getActor(x,y);
-    if(getWorld()->isThereActor(x, y) && temp->getID() == IID_WATER_SPURT)
+    
+    if(temp != nullptr && temp->getID() == IID_WATER_SPURT)
         getHurt();
+    if(getWorld()->isNearFrackMan(this, 0))
+        gotHit = true;
+    
+}
+
+void Protester::checkFrackMan()
+{
+    if(getWorld()->isNearFrackMan(this, 0))
+        gotHit = true;
 }
 
 int Protester::ticksToWait()
@@ -682,6 +735,14 @@ int Protester::ticksToWait()
         return 3 - getWorld()->getLevel()/4;
     else
         return 0;
+}
+
+int Protester::restingTicks()
+{
+    if(100 - getWorld()->getLevel() * 10 < 50)
+        return 100 - getWorld()->getLevel() * 10;
+    else
+        return 50;
 }
 
 int Protester::findPath(int x, int y)
@@ -1074,14 +1135,12 @@ void Protester::makePerpindicularMove()
         case up:
             if(isValidMove(left))
             {
-                
                 setDirection(left);
                 go(left);
                 break;
             }
             else if(isValidMove(right))
             {
-                
                 setDirection(left);
                 go(right);
             }
@@ -1148,7 +1207,6 @@ void Protester::moveRandomly()
     Direction startDir = getDirection();
     if(m_ticksSinceHorizontalMove > 100 && amIAtAnIntersection(getX(), getY()))
     {
-        cout << "NOW" << endl;
         makePerpindicularMove();
         m_ticksSinceHorizontalMove = 0;
         return;
@@ -1193,18 +1251,24 @@ void Protester::move()
     if(! isAlive())
         return;
     
-    if(getX() == 60 && getY() == 60)
+    if(getX() == 60 && getY() == 60 && shouldILeave == true)
     { setDead(); return; }
     
     if(getHitPoints() <= 0)
-    {setDead();  getWorld()->playSound(SOUND_PROTESTER_GIVE_UP); return;}
+    {setDead();  getWorld()->playSound(SOUND_PROTESTER_GIVE_UP); getWorld()->increaseScore(100); return;}
     
     checkBullets();
-    
+    checkFrackMan();
 //    if(getWorld()->facingTowardFrackMan(this))
 //        foundFrackMan = true;
 
-    
+    if(gotHit == true && m_ticksWhileStunned < restingTicks())
+    {
+        m_ticksWhileStunned ++;
+        return;
+    }
+    gotHit = false;
+    m_ticksWhileStunned = 0;
     
     m_ticksSinceHorizontalMove++;
 //    cout << m_ticksSinceHorizontalMove << endl;
@@ -1242,7 +1306,7 @@ void Protester::move()
         {
             setDead(); return;
         }
-        
+        moveRandomly();
         findExit2();
 //        moveTo(getX()+1, getY());
 //        setDirection(right);
