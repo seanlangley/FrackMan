@@ -158,19 +158,9 @@ bool StudentWorld::facingTowardFrackMan(Actor *a) const
 }
 
 
-////////Checks the Euclidian Radius of
-bool StudentWorld::isInvalidRadius(int x, int y)
-{
-    for(int i = 0; i < 8; i++)
-        for(int k = 0; k < 8; k++)
-            if(isThereActor(x+i, y+k) || isThereActor(x+4-i, y+4-k))
-                return true;
-    return false;
-}
 
 void StudentWorld::addActor(Actor *a)
 {
-    
     m_actors.push_back(a);
 }
 ////////////////////////////////////////////////////////////////////////////////
@@ -349,6 +339,7 @@ void StudentWorld::addDirt()
         for(int y = 4; y < 60; y++)
             if(x < 30 || x > 33)
                 m_dirt[x][y] = new Dirt(this, x,y);
+    
 }
 
 
@@ -431,6 +422,7 @@ void StudentWorld::addNewActors()
         
     }
     
+    
 }
 
 void StudentWorld::addNewProtestors()
@@ -455,9 +447,9 @@ void StudentWorld::addNewProtestors()
     if(count == 0)
     {
         if(regProt)
-            m_actors.push_back(new RegularProtester(this, 0,60));
+            m_actors.push_back(new RegularProtester(this, 60,60));
         else
-            m_actors.push_back(new HardcoreProtester(this, 0,60));
+            m_actors.push_back(new HardcoreProtester(this, 60,60));
     }
     
     if(count >= numObjects(IID_PROTESTER))
@@ -477,9 +469,9 @@ void StudentWorld::addNewProtestors()
     else
     {
         if(regProt)
-            m_actors.push_back(new RegularProtester(this, 0,60));
+            m_actors.push_back(new RegularProtester(this, 60,60));
         else
-            m_actors.push_back(new HardcoreProtester(this, 0,60));
+            m_actors.push_back(new HardcoreProtester(this, 60,60));
         m_ticks = 0;
     }
     
@@ -793,7 +785,9 @@ int StudentWorld::init()
     addBoulders();
     addOil();
     addGold();
+    m_actors.push_back(new HardcoreProtester(this, 60, 60));
     m_player = new FrackMan(this);
+    
     return GWSTATUS_CONTINUE_GAME;
 }
 
