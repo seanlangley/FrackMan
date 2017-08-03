@@ -3,4 +3,4 @@ Implementation of a DigDug clone from a computer programming class at UCLA, Wint
 Files I created were studentworld.h, studentworld.cpp, actor.h, actor.cpp.
 Compiled in Xcode with Quartz.
 
-Compilation from the terminal is not tested, and no Makefile is proided.
+Compilation from the terminal is not tested, and no Makefile is provided.
